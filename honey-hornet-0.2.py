@@ -1,12 +1,15 @@
+import sys
 import nmap
 from termcolor import colored
 import telnetlib
+
 
 lhosts = []  # writes live hosts that are found here
 commonAdminPorts = [21, 22, 23, 25, 135, 3389]  # removed 80/443; causing problems
 vhosts = []  # hosts that have open admin ports
 
-users = ["", "admin"]  # usernames to test
+
+users = ["mike", "", "admin"]  # usernames to test
 passwords = ["", "password"]  # passwords to test
 
 
@@ -29,7 +32,7 @@ def live_hosts(nm):
     hosts_list = [(x, nm[x]['status']['state']) for x in nm.all_hosts()]
     # prints the hosts that are alive
     for host, status in hosts_list:
-        print('[+] {0}   is {1}'.format(colored(host, 'yellow'), colored(status, 'green')))
+        print('[+] {0} is {1}'.format(colored(host, 'yellow'), colored(status, 'green')))
         lhosts.append(host)  # adds live hosts to list to scan for open admin ports
 
 
@@ -68,9 +71,9 @@ def admin_scanner(nm):
                     b = VulnHost(lhost)  # adds host to class if it doesn't exist
                     vhosts.append(b)  # appends vulnerable host to list
                 b.add_vport(port)  # adds open port to list to check in the class
-                print '[+] port : %s\t > %s' % (colored(port, 'yellow'), colored(sop, 'green'))
-            else:
-                print '[+] port : %s\t > %s' % (colored(port, 'yellow'), sop)
+                print '[+] port : %s >> %s' % (colored(port, 'yellow'), colored(sop, 'green'))
+            # else:
+                # print '[+] port : %s\t > %s' % (colored(port, 'yellow'), sop)
 
 
 # Checks to see which open admin porst each host has
@@ -78,7 +81,6 @@ def admin_scanner(nm):
 def check_vports():
     print "[*] testing vulnerable host ip address..."
     for vhost in vhosts:
-        print vhost.ip
         for port in vhost.ports:
             if port == 23:
                 check_telnet(vhost)
@@ -89,29 +91,34 @@ def check_vports():
 def check_telnet(vhost):
     print "[*] testing telnet connection..."
     host = vhost.ip
-    t = telnetlib.Telnet()
-    print "[*] opening telnet connection..."
     for user in users:
         x = 0
         while x < len(passwords):
             try:
-                print host  # for debug
-                print passwords[x]  # for debug
-                t.open(host, "23", 1)  # open telnet connection(ipaddr, port, timeout)
+                # print host  # for debug
+                # print user  # for debug
+                # print passwords[x]  # for debug
+                t = telnetlib.Telnet(host, 23, 1)  # open telnet connection(ipaddr, port, timeout)
                 t.read_until("login: ")
                 t.write(user + "\n")
-                t.read_until("password: ")
+                t.read_until("Password: ")
                 t.write(passwords[x] + "\n")
                 t.write("ls\n")
                 t.write("exit\n")
-                print t.read_all()
+                po = t.read_all()
+                # sys.stdout.write(po)  for debug purposes
+                if "logout" in po:
+                    print "[!] Password found! < {0} >".format(colored(passwords[x], 'yellow'))
+                    exit(0)
                 x += 1
             except Exception as e:
-                print "[!] ", e
-                exit(0)
+                x += 1
+                # print "[!] ", e  # prints thrown exception, for debug
 
 
 def main():
+    new_pw = raw_input( "Password to add to list: ")
+    passwords.append(new_pw)
     print "[*] initializing port scanner..."
     nm = nmap.PortScanner()  # defines port scanner function to pass to each function
     live_hosts(nm)  # checks for live hosts
