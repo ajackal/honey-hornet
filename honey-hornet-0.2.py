@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 import sys
 import nmap
 from termcolor import colored
@@ -6,6 +8,8 @@ from ftplib import FTP
 from pexpect import pxssh
 import time
 from threading import Thread, BoundedSemaphore
+import optparse
+
 
 lhosts = []  # writes live hosts that are found here
 commonAdminPorts = [21, 22, 23, 25, 135, 3389]  # removed 80/443; causing problems
@@ -29,9 +33,12 @@ class VulnHost:
 
 
 # Checks for hosts that are alive on the network
-def live_hosts(nm):
+def live_hosts(nm, addrs, iL):
     print "[*] scanning for live hosts..."
-    nm.scan(hosts='127.0.0.1', arguments='-sn')  # ping scan to check for live hosts
+    if iL is False:
+        nm.scan(hosts=addrs, arguments='-sn')  # ping scan to check for live hosts
+    else:
+        nm.scan(arguments='-sn -iL ' + addrs)
     hosts_list = [(x, nm[x]['status']['state']) for x in nm.all_hosts()]
     # prints the hosts that are alive
     for host, status in hosts_list:
@@ -68,6 +75,7 @@ def admin_scanner(nm):
         nm.scan(lhost, str(commonAdminPorts))  # nmap scan command
         lport = nm[lhost]['tcp'].keys()  # retrieves tcp port results from scan
         lport.sort()  # sorts ports
+        y = 0
         for port in lport:
             sop = nm[lhost]['tcp'][port]['state']  # defines port state variable
             if sop == 'open':  # checks to see if status is open
@@ -76,8 +84,11 @@ def admin_scanner(nm):
                     vhosts.append(b)  # appends vulnerable host to list
                 b.add_vport(port)  # adds open port to list to check in the class
                 print '[+] port : %s >> %s' % (colored(port, 'yellow'), colored(sop, 'green'))
-            # else:
+            else:
+                y += 1
                 # print '[+] port : %s\t > %s' % (colored(port, 'yellow'), sop)
+        if y == len(lport):
+            print '[!] No open ports found.'
 
 
 # Checks to see which open admin porst each host has
@@ -102,8 +113,8 @@ def check_telnet(vhost):
     for user in users:
         x = 0
         while x < len(passwords):
-            try:
-                t = telnetlib.Telnet(host, 23, 1)  # open telnet connection(ipaddr, port, timeout)
+            try: # open telnet connection(ipaddr, port, timeout)
+                t = telnetlib.Telnet(host, 23, 1)
                 t.read_until("login: ")
                 t.write(user + "\n")
                 t.read_until("Password: ")
@@ -113,13 +124,17 @@ def check_telnet(vhost):
                 po = t.read_all()
                 # sys.stdout.write(po)  for debug purposes
                 if "logout" in po:
-                    print "[!] Password found! < {0} >".format(colored(passwords[x], 'yellow'))
+                    print "[!] Success for TELNET! user: {0}, password: {1}".format(\
+                            colored(user, 'yellow'), colored(passwords[x], 'green'))
                 x += 1
             except Exception:
                 x += 1
                 # print "[!] ", e  # prints thrown exception, for debug
     # TODO: add break here to end test
+    if x == len(passwords):
+        print "[!] Password not found."
 
+        
 def check_ftp(vhost):
     print "[*] testing ftp connection..."
     host = vhost.ip
@@ -128,28 +143,30 @@ def check_ftp(vhost):
         f = FTP(host)
         f.login()
         f.quit()
-        print "[+] Anonymous ftp connection successful."
+        print "[+] Anonymous FTP connection successful."
         anon = True
     except Exception as e:
-        print "[!] Anonymous login failed: {0}".format(e)
+        print "[!] Anonymous FTP login failed: {0}".format(e)
         pass
     if anon == False:
-        success = False
-        while success == False:
-            for user in users:
-                x = 0
-                while x < len(passwords):
-                    try:
-                        f = FTP(host)
-                        f.login(user, passwords[x])
-                        f.close()
-                        print "[!] Success! user: {0}, password: {1}".format(colored(user, 'yellow'), colored(passwords[x], 'green'))
-                        success = True
-                        break
-                    except Exception as e:
-                        # print "[!] Something went wrong: {0}".format(e)
-                        x += 1
-                break 
+        for user in users:
+            x = 0
+            while x < len(passwords):
+                try:
+                    f = FTP(host)
+                    f.login(user, passwords[x])
+                    f.close()
+                    print "[!] Success for FTP! user: {0}, password: {1}".format(\
+                        colored(user, 'yellow'), colored(passwords[x], 'green'))
+                    success = True
+                    break
+                except Exception as e:
+                    # print "[!] Something went wrong: {0}".format(e)
+                    x += 1
+            continue 
+    if x == len(passwords):
+        print "[!] Password not found."
+
 
 def check_ssh(vhost):
     host = vhost.ip
@@ -161,13 +178,16 @@ def check_ssh(vhost):
 
     max_connections = 5
     connection_lock = BoundedSemaphore(value=max_connections)
-    
+
+    print "[*] testing SSH service..."
+
     def connect(host,user, password):
-        #print "[*] testing ssh {0}:{1}".format(user, password)
+        # print "[*] testing ssh {0}:{1}".format(user, password)
         try:
             s = pxssh.pxssh()
             s.login(host, user, password)
-            print '[+] user && password found: {0} : {1}'.format(user, password)
+            print "[!] Success for SSH! user: {0}, password: {1}".format(colored(user,\
+                                                'yellow'), colored(password, 'green'))
             Found = True
             return s
         except Exception as e:
@@ -190,15 +210,8 @@ def check_ssh(vhost):
                     #raise
             # add something here to close openSSH prompt
             # exit(0)
+    connection_lock.acquire()
     for user in users:
-        if Found is True:
-            print "[*] password found!"
-            break
-        if Fails > 5:
-            print "[*] too many timeouts!"
-            break
-        connection_lock.acquire()
-        x = 0
         try:
             for password in passwords:
                 t = Thread(target=connect, args=(host, user, password))
@@ -206,18 +219,47 @@ def check_ssh(vhost):
                 #t.close()
         except Exception as e:
             print str(e)
-            # break
-        # break
 
 
 def main():
     new_pw = raw_input( "Password to add to list: ")
     passwords.append(new_pw)
-    print "[*] initializing port scanner..."
-    nm = nmap.PortScanner()  # defines port scanner function to pass to each function
-    live_hosts(nm)  # checks for live hosts
-    admin_scanner(nm)  # checks for open admin ports
-    check_vports()  # tests open ports for default credentials
+
+    parser = optparse.OptionParser('usage: %prog [-i <inputfile> OR -c <CIDR block>] -o <\
+                                   output file (optional)>')
+    parser.add_option('-i', dest='ifile', type='string', help='read from file for IP\
+                      addresses')
+    parser.add_option('-c', dest='cidr', type='string', help='cidr block or localhost')
+    parser.add_option('-o', dest='ofile', type='string', help='output to this file,\
+                      if not defined will out put to stdout')
+    parser.add_option('-p', dest='ports', type='string', help='read from file for ports')
+    (options, args) = parser.parse_args()
+
+    ifile = options.ifile
+    cidr = options.cidr
+    ofile = options.ofile
+    ports = options.ports
+
+    if ifile != None and cidr != None:
+        print "[!] Cannot have two input options!"
+        print parser.usage
+        exit (0)
+    elif ifile == None and cidr == None:
+        print "[!] Must define something to scan!"
+        print parser.usage
+        exit(0)
+    else:
+        print "[*] initializing port scanner..."
+        nm = nmap.PortScanner()  # defines port scanner function to pass to each function
+        if ifile != None:
+            addrs = ifile
+            iL = True
+        else:
+            addrs = cidr
+            iL = False
+        live_hosts(nm, addrs, iL)  # checks for live hosts
+        admin_scanner(nm)  # checks for open admin ports
+        check_vports()  # tests open ports for default credentials
 
 
 if __name__ == "__main__":
