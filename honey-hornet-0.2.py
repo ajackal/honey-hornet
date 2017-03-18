@@ -205,14 +205,15 @@ def check_ssh(vhost):
     print "[*] testing SSH service..."
 
     def connect(host,user, password):
-        # print "[*] testing ssh {0}:{1}".format(user, password)
+        print "[*] testing ssh {0}:{1} for {2}".format(user, password, host)
         try:
             s = pxssh.pxssh()
             s.login(host, user, password)
+            Found = True
             print "[!] Success for SSH! user: {0}, password: {1}".format(colored(user,\
                                                 'yellow'), colored(password, 'green'))
-            Found = True
-            return s
+            s.logout()
+            s.close()
         except Exception as e:
             return Fails + 1
             if 'read_nonblocking' in str(e):
