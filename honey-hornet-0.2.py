@@ -9,6 +9,7 @@ from pexpect import pxssh
 import time
 from threading import Thread, BoundedSemaphore
 import optparse
+from multiprocessing import Process
 
 
 lhosts = []  # writes live hosts that are found here
@@ -17,7 +18,7 @@ vhosts = []  # hosts that have open admin ports
 
 
 users = ["mike", "", "admin"]  # usernames to test
-passwords = ["", "password"]  # passwords to test
+passwords = ["", "password", "12345"]  # passwords to test
 
 
 # define class for hosts with open admin ports
@@ -73,8 +74,11 @@ def admin_scanner(nm):
         b = 'a' + str(x)  # unique class identifier
         print "[*] checking {0} for open admin ports...".format(lhost)
         nm.scan(lhost, str(commonAdminPorts))  # nmap scan command
-        lport = nm[lhost]['tcp'].keys()  # retrieves tcp port results from scan
-        lport.sort()  # sorts ports
+        try:
+            lport = nm[lhost]['tcp'].keys()  # retrieves tcp port results from scan
+            lport.sort()  # sorts ports
+        except Exception:
+            raise
         y = 0
         for port in lport:
             sop = nm[lhost]['tcp'][port]['state']  # defines port state variable
@@ -98,52 +102,68 @@ def check_vports():
     for vhost in vhosts:
         for port in vhost.ports:
             if port == 21:
-                check_ftp(vhost)
+                p1 = Process(target=check_ftp, args=(vhost,))
+                p1.start()
+                p1.join()
+                # check_ftp(vhost)
             if port == 22:
-                check_ssh(vhost)
+                p2 = Process(target=check_ssh, args=(vhost,))
+                p2.start()
+                p2.join()
+                # check_ssh(vhost)
             if port == 23:
-                check_telnet(vhost)
+                p3 = Process(target=check_telnet, args=(vhost,))
+                p3.start()
+                p3.join()
+                # check_telnet(vhost)
 
 
 # Trys to connect via Telnet with common credentials
 # Then it prints the results of the connection attempt
 def check_telnet(vhost):
-    print "[*] testing telnet connection..."
     host = vhost.ip
+    print "[*] testing telnet connection on {0}...".format(host)
     for user in users:
         x = 0
         while x < len(passwords):
             try: # open telnet connection(ipaddr, port, timeout)
                 t = telnetlib.Telnet(host, 23, 1)
-                t.read_until("login: ")
-                t.write(user + "\n")
-                t.read_until("Password: ")
-                t.write(passwords[x] + "\n")
-                t.write("ls\n")
-                t.write("exit\n")
-                po = t.read_all()
-                # sys.stdout.write(po)  for debug purposes
-                if "logout" in po:
-                    print "[!] Success for TELNET! user: {0}, password: {1}".format(\
-                            colored(user, 'yellow'), colored(passwords[x], 'green'))
+                tl = t.read_until()
+                if tl == "login: ":
+                    t.write(user + "\n")
+                    t.read_until("Password: ")
+                    t.write(passwords[x] + "\n")
+                    t.write("ls\n")
+                    t.write("exit\n")
+                    po = t.read_all()
+                    # sys.stdout.write(po)  for debug purposes
+                    if "logout" in po:
+                        print "[!] Success for TELNET! host: {0}, user: {1}, password: {2}"\
+                            .format(host, colored(user, 'yellow'), colored(passwords[x],\
+                                                                           'green'))
+                else:
+                    continue
                 x += 1
             except Exception:
                 x += 1
+                if x == len(passwords):
+                    print "[!] Password not found."
                 # print "[!] ", e  # prints thrown exception, for debug
-    # TODO: add break here to end test
-    if x == len(passwords):
-        print "[!] Password not found."
-
+                # TODO: add break here to end test
         
+
 def check_ftp(vhost):
-    print "[*] testing ftp connection..."
     host = vhost.ip
+    print "[*] testing ftp connection on {0}...".format(host)
     anon = False
     try:
         f = FTP(host)
         f.login()
         f.quit()
-        print "[+] Anonymous FTP connection successful."
+        fw = f.getwelcome()
+        print "[+] Anonymous FTP connection {0} on {1}.".format(colored("successful",\
+                                                                        "green"), host)
+        print "FTP server responded with {0}".format(fw)
         anon = True
     except Exception as e:
         print "[!] Anonymous FTP login failed: {0}".format(e)
@@ -153,19 +173,22 @@ def check_ftp(vhost):
             x = 0
             while x < len(passwords):
                 try:
-                    f = FTP(host)
-                    f.login(user, passwords[x])
-                    f.close()
-                    print "[!] Success for FTP! user: {0}, password: {1}".format(\
-                        colored(user, 'yellow'), colored(passwords[x], 'green'))
+                    f = FTP()
+                    fc = f.connect(host, 21, 1)
+                    if fc == True:
+                        fw = f.getwelcome()
+                        print "[*] FTP server returned %s", fw
+                        f.login(user, passwords[x])
+                        f.close()
+                        print "[!] Success for FTP! user: {0}, password: {1}".format(\
+                            colored(user, 'yellow'), colored(passwords[x], 'green'))
                     success = True
                     break
                 except Exception as e:
                     # print "[!] Something went wrong: {0}".format(e)
                     x += 1
-            continue 
-    if x == len(passwords):
-        print "[!] Password not found."
+                    if x == len(passwords):
+                        print "[!] Password not found."
 
 
 def check_ssh(vhost):
