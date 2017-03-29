@@ -7,7 +7,7 @@ import telnetlib
 from ftplib import FTP
 from pexpect import pxssh
 import time
-from threading import Thread, BoundedSemaphore
+from threading import Thread, Semaphore
 import optparse
 from multiprocessing import Process
 
@@ -25,12 +25,18 @@ passwords = ["", "password", "12345"]  # passwords to test
 class VulnHost:
     # open admin ports added here
     ports = []
+    # ports with default credentials
+    cred_def = []
+
     # defins hosts ip address
     def __init__(self, ipaddr):
         self.ip = ipaddr
     # function addes open admin port to list
     def add_vport(self, port):
         self.ports.append(port)
+    # ports with default credentials
+    def creds_def(self, port, user, password):
+        self.cred_def.append(port + ";" + user + ";" + password)
 
 
 # Checks for hosts that are alive on the network
@@ -81,18 +87,21 @@ def admin_scanner(nm):
             raise
         y = 0
         for port in lport:
-            sop = nm[lhost]['tcp'][port]['state']  # defines port state variable
-            if sop == 'open':  # checks to see if status is open
-                if b not in vhosts:  # checks to see if class has already been created
-                    b = VulnHost(lhost)  # adds host to class if it doesn't exist
-                    vhosts.append(b)  # appends vulnerable host to list
-                b.add_vport(port)  # adds open port to list to check in the class
-                print '[+] port : %s >> %s' % (colored(port, 'yellow'), colored(sop, 'green'))
-            else:
-                y += 1
-                # print '[+] port : %s\t > %s' % (colored(port, 'yellow'), sop)
-        if y == len(lport):
-            print '[!] No open ports found.'
+            try:
+                sop = nm[lhost]['tcp'][port]['state']  # defines port state variable
+                if sop == 'open':  # checks to see if status is open
+                    if b not in vhosts:  # checks to see if class has already been created
+                        b = VulnHost(lhost)  # adds host to class if it doesn't exist
+                        vhosts.append(b)  # appends vulnerable host to list
+                    b.add_vport(port)  # adds open port to list to check in the class
+                    print '[+] port : %s >> %s' % (colored(port, 'yellow'), colored(sop, 'green'))
+                else:
+                    y += 1
+                    # print '[+] port : %s\t > %s' % (colored(port, 'yellow'), sop)
+            except Exception:
+                raise
+            if y == len(lport):
+                print '[!] No open ports found.'
 
 
 # Checks to see which open admin porst each host has
@@ -100,22 +109,22 @@ def admin_scanner(nm):
 def check_vports():
     print "[*] testing vulnerable host ip address..."
     for vhost in vhosts:
-        for port in vhost.ports:
-            if port == 21:
-                p1 = Process(target=check_ftp, args=(vhost,))
-                p1.start()
-                p1.join()
-                # check_ftp(vhost)
-            if port == 22:
-                p2 = Process(target=check_ssh, args=(vhost,))
-                p2.start()
-                p2.join()
-                # check_ssh(vhost)
-            if port == 23:
-                p3 = Process(target=check_telnet, args=(vhost,))
-                p3.start()
-                p3.join()
-                # check_telnet(vhost)
+        # for port in vhost.ports:
+        if 21 in vhost.ports:
+            p1 = Process(target=check_ftp, args=(vhost,))
+            p1.start()
+            p1.join()
+            # check_ftp(vhost)
+        if 22 in vhost.ports:
+            p2 = Process(target=check_ssh, args=(vhost,))
+            p2.start()
+            p2.join()
+            # check_ssh(vhost)
+        if 23 in vhost.ports:
+            p3 = Process(target=check_telnet, args=(vhost,))
+            p3.start()
+            p3.join()
+            # check_telnet(vhost)
 
 
 # Trys to connect via Telnet with common credentials
@@ -123,34 +132,43 @@ def check_vports():
 def check_telnet(vhost):
     host = vhost.ip
     print "[*] testing telnet connection on {0}...".format(host)
+    success = False
+    # while success is False: # causes infinite loop if connection refused
     for user in users:
         x = 0
-        while x < len(passwords):
+        for password in passwords:
             try: # open telnet connection(ipaddr, port, timeout)
                 t = telnetlib.Telnet(host, 23, 1)
-                tl = t.read_until()
-                if tl == "login: ":
+                tl = t.read_some()
+                if "login: " in tl:
                     t.write(user + "\n")
                     t.read_until("Password: ")
                     t.write(passwords[x] + "\n")
                     t.write("ls\n")
                     t.write("exit\n")
                     po = t.read_all()
-                    # sys.stdout.write(po)  for debug purposes
                     if "logout" in po:
                         print "[!] Success for TELNET! host: {0}, user: {1}, password: {2}"\
-                            .format(host, colored(user, 'yellow'), colored(passwords[x],\
-                                                                           'green'))
+                                .format(host, colored(user, 'yellow'), colored(passwords[x],\
+                                                                               'green'))
+                        # vhost.creds_def("23;", user, passwords[x])
+                        print str(vhost.ip) + ";23;" + str(user) + ";" + str(passwords[x])
+                        success = True
+                        print success
+                        break
                 else:
-                    continue
-                x += 1
-            except Exception:
-                x += 1
-                if x == len(passwords):
-                    print "[!] Password not found."
-                # print "[!] ", e  # prints thrown exception, for debug
-                # TODO: add break here to end test
-        
+                    break
+            except Exception as e:
+                    if "Connection refused" in e:
+                        break
+                    else:
+                        print e
+                        x += 1
+                        if x == len(passwords):
+                            print "[!] Password not found."
+                        # print "[!] ", e  # prints thrown exception, for debug
+                        # TODO: add break here to end test
+                
 
 def check_ftp(vhost):
     host = vhost.ip
@@ -187,25 +205,26 @@ def check_ftp(vhost):
                 except Exception as e:
                     # print "[!] Something went wrong: {0}".format(e)
                     x += 1
-                    if x == len(passwords):
-                        print "[!] Password not found."
+                    # if x == len(passwords):
+                        # print "[!] Password not found."
 
 
 def check_ssh(vhost):
     host = vhost.ip
-
+    
     global Found
     global Fails
+    
     Found = False
     Fails = 0
 
     max_connections = 5
-    connection_lock = BoundedSemaphore(value=max_connections)
+    connection_lock = Semaphore(value=max_connections)
 
     print "[*] testing SSH service..."
 
     def connect(host,user, password):
-        print "[*] testing ssh {0}:{1} for {2}".format(user, password, host)
+        # print "[*] testing ssh {0}:{1} for {2}".format(user, password, host)
         try:
             s = pxssh.pxssh()
             s.login(host, user, password)
@@ -214,32 +233,41 @@ def check_ssh(vhost):
                                                 'yellow'), colored(password, 'green'))
             s.logout()
             s.close()
+            return Found
         except Exception as e:
             return Fails + 1
             if 'read_nonblocking' in str(e):
                 time.sleep(5)
-                s.login(host, user, passwords[x], False)
+                connect(host, user, passwords[x], False)
             elif 'synchronize with original prompt' in str(e):
                 time.sleep(1)
-                s.login(host, user, passwords[x], False)
+                connect(host, user, passwords[x], False)
                 raise
-        #finally:
-            #try:
-                #connection_lock.release()
-            #except Exception as e:
-                #if e is "ValueError":
-                    #raise
-                #else:
-                    #print e
-                    #raise
+        finally:
+            # try:
+            # if release:
+            connection_lock.release()
+            # except Exception as e:
+                # if e is "ValueError":
+                    # raise
+                # else:
+                    # print e
+                    # raise
             # add something here to close openSSH prompt
             # exit(0)
-    connection_lock.acquire()
+            
+    if Found is True:
+        print '[*] exiting: password found.'
+        exit(0)
+    if Fails > 5:
+        print '[!] Exiting: too many timeouts!'
     for user in users:
         try:
+            connection_lock.acquire()
             for password in passwords:
                 t = Thread(target=connect, args=(host, user, password))
                 t.start()
+                t.join()
                 #t.close()
         except Exception as e:
             print str(e)
