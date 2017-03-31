@@ -14,6 +14,7 @@ for host, status in hosts_list:
     print('[+] {0} is {1}'.format(host, status))
     lhosts.append(host)
 
+
 # This was the first function I wrote that got it right
 # But it didn't display results in a useful manner
 # So I rewrote it to the function below this one.
@@ -29,6 +30,7 @@ for host, status in hosts_list:
 #         lport.sort()
 #         for port in lport:
 #             print '[+] port : %s\tstate : %s' % (port, nm[lhost]['tcp'][port]['state'])
+
 
 # def admin_scanner():
 print "[*] scanning for open admin ports..."
