@@ -5,7 +5,6 @@ from termcolor import colored
 import telnetlib
 from ftplib import FTP
 from pexpect import pxssh
-# import time
 from threading import Thread, Semaphore
 import optparse
 from multiprocessing import Process
@@ -23,23 +22,17 @@ class VulnHost(object):
     # defines hosts ip address
     # creates ports dictionary
     def __init__(self, ipaddr):
-        self.ports = {}
+        self.ports = []
         self.p_creds = []
         self.ip = ipaddr
 
     # function addes open admin port to list
-    def add_vport(self, port, value):
-        self.ports.update({port: value})
+    def add_vport(self, port):
+        self.ports.append(port)
 
     # ports with default credentials
     def put_creds(self, newcreds):
         self.p_creds.append(newcreds)
-        return self.p_creds
-
-    # prints the results of the test
-    def get_results(self):
-        # return self.ip + ';' + str(self.ports).strip('[]')
-        return self.ip + ';' + str(self.p_creds)  # Checks for hosts that are alive on the network
 
 
 def live_hosts(nm, addrs, iL):
@@ -91,49 +84,44 @@ def admin_scanner(nm):
             try:
                 sop = nm[lhost]['tcp'][port]['state']  # defines port state variable
                 if sop == 'open':  # checks to see if status is open
-                    if b not in vhosts:  # checks to see if class has already been created
-                        b = VulnHost(lhost)  # adds host to class if it doesn't exist
+                    if b not in vhosts:  # checks to see if host already has an object
+                        b = VulnHost(lhost)  # creates an object for that host if it doesn't exist
                         vhosts.append(b)  # appends vulnerable host to list
-                    value = True
-                    b.add_vport(port, value)  # adds open port to list to check in the class
+                    b.add_vport(port)  # adds open port to dictionary with value: True
                     print '[+] port : %s >> %s' % (colored(port, 'yellow'), colored(sop, 'green'))
                 else:
                     y += 1
-                    # print '[+] port : %s\t > %s' % (colored(port, 'yellow'), sop)
+                    # print '[+] port : %s\t > %s' % (colored(port, 'yellow'), sop)  # displays closed ports
             except Exception:
                 raise
             if y == len(lport):
                 print '[!] No open ports found.'
 
 
-# Checks to see which open admin porst each host has
+# Checks to see which open admin ports each host has
 # Then runs the function to check default credentials
 def check_vports():
     print "[*] testing vulnerable host ip address..."
     for vhost in vhosts:
-        # for port in vhost.ports:
         if 21 in vhost.ports:
             p1 = Process(target=check_ftp, args=(vhost,))
             p1.start()
             p1.join()
-        # check_ftp(vhost)
         if 22 in vhost.ports:
             p2 = Process(target=check_ssh, args=(vhost,))
             p2.start()
             p2.join()
-        # check_ssh(vhost)
         if 23 in vhost.ports:
             p3 = Process(target=check_telnet, args=(vhost,))
             p3.start()
             p3.join()
-            # check_telnet(vhost)
 
 
 # Trys to connect via Telnet with common credentials
 # Then it prints the results of the connection attempt
 def check_telnet(vhost):
     host = vhost.ip
-    print "[*] testing telnet connection on {0}...".format(host)
+    # print "[*] testing telnet connection on {0}...".format(host)
     # while success is False: # causes infinite loop if connection refused
     for user in users:
         x = 0
@@ -149,8 +137,8 @@ def check_telnet(vhost):
                     t.write("exit\n")
                     po = t.read_all()
                     if "logout" in po:
-                        newcreds = host + ";23;" + user + ';' + passwords[x]
-                        rec_results(ofile, newcreds)
+                        newcreds = host + ";telnet;23;" + user + ';' + passwords[x]
+                        vhost.put_creds(newcreds)
                         print "[!] Success for TELNET! host: {0}, user: {1}, password: {2}".format(host,
                                                         colored(user, 'yellow'), colored(passwords[x], 'green'))
                         break
@@ -165,106 +153,94 @@ def check_telnet(vhost):
                     if x == len(passwords):
                         print "[!] Password not found."
                         # print "[!] ", e  # prints thrown exception, for debug
-                        # TODO: add break here to end test
+                        # TODO: fix looping issue, password found, continues to test passwords
 
 
 def check_ftp(vhost):
     host = vhost.ip
-    print "[*] testing ftp connection on {0}...".format(host)
-    anon = False
+    # print "[*] testing ftp connection on {0}...".format(host)
     try:
         f = FTP(host)
         f.login()
         f.quit()
         fw = f.getwelcome()
         print "[+] Anonymous FTP connection {0} on {1}.".format(colored("successful", "green"), host)
-        newcreds = host + ";21;anon"
-        rec_results(ofile, newcreds)
+        newcreds = host + ';ftp;21;anon' + fw
+        vhost.put_creds(newcreds)
         print "[+] FTP server responded with {0}".format(fw)
-        anon = True
     except Exception as e:
         print "[!] Anonymous FTP login failed: {0}".format(e)
         pass
-    # maybe remove this if statement to test user/pwd even if anon is True
-    if anon is False:
-        for user in users:
-            x = 0
-            while x < len(passwords):
-                try:
-                    f = FTP()
-                    fc = f.connect(host, 21, 1)
-                    if fc is True:
-                        fw = f.getwelcome()
-                        print "[*] FTP server returned %s", fw
-                        f.login(user, passwords[x])
-                        f.close()
-                        newcreds = host + ";21;" + user + ';' + passwords[x]
-                        rec_results(ofile, newcreds)
-                        print "[!] Success for FTP! user: {0}, password: {1}".format(colored(user, 'yellow'),
-                                                                                     colored(passwords[x], 'green'))
-                    break
-                except Exception:
-                    # print "[!] Something went wrong: {0}".format(e)
-                    x += 1
-                    # if x == len(passwords):
-                    # print "[!] Password not found."
+    for user in users:
+        x = 0
+        while x < len(passwords):
+            try:
+                f = FTP()
+                fc = f.connect(host, 21, 1)
+                if fc is True:
+                    fw = f.getwelcome()
+                    print "[*] FTP server returned %s", fw
+                    f.login(user, passwords[x])
+                    f.close()
+                    newcreds = host + ";ftp;21;" + user + ';' + passwords[x] + ';' + fw
+                    vhost.put_creds(newcreds)
+                    print "[!] Success for FTP! user: {0}, password: {1}".format(colored(user, 'yellow'),
+                                                                                 colored(passwords[x], 'green'))
+                break
+            except Exception:
+                # print "[!] Something went wrong: {0}".format(e)
+                x += 1
+                if x == len(passwords):
+                    print "[!] Password not found."
 
 
 def check_ssh(vhost):
     host = vhost.ip
 
-    global Found
-    global Fails
-
-    Found = False
-    Fails = 0
-
     max_connections = 5
     connection_lock = Semaphore(value=max_connections)
 
-    print "[*] testing SSH service..."
+    # print "[*] testing SSH service..."
 
-    def connect(host, user, password):
+    def connect(vhost, host, user, password):
         # print "[*] testing ssh {0}:{1} for {2}".format(user, password, host)
+        found = False
         try:
             s = pxssh.pxssh()
             s.login(host, user, password)
-            Found = True
             print "[!] Success for SSH! user: {0}, password: {1}".format(colored(user, 'yellow'), colored(password,
                                                                                                           'green'))
-            newcreds = host + ";22;" + user + ';' + password
-            rec_results(ofile, newcreds)
+            found = True
             s.logout()
             s.close()
-            return Found
+
         except Exception:
-            return Fails + 1
-            raise
+            pass
         finally:
+            if found is True:
+                newcreds = host + ';ssh;22;' + user + ';' + password
+                vhost.put_creds(newcreds)
             connection_lock.release()
             # add something here to close openSSH prompt
-            # exit(0)
 
-    if Found is True:
-        print '[*] exiting: password found.'
-        exit(0)
-    if Fails > 5:
-        print '[!] Exiting: too many timeouts!'
     for user in users:
         try:
             connection_lock.acquire()
             for password in passwords:
-                t = Thread(target=connect, args=(host, user, password))
+                t = Thread(target=connect, args=(vhost, host, user, password))
                 t.start()
                 t.join()
         except Exception as e:
             print str(e)
 
 
-def rec_results(ofile, newcreds):
-    f = open(ofile, 'a+')
-    f.write(newcreds + '\n')
-    f.close()
+def rec_results(ofile):
+    print '[*] recording results...'
+    for vhost in vhosts:
+        with open(ofile, 'a+') as f:
+            # print vhost.p_creds  # returns correct values
+            x = str(vhost.p_creds).strip('[]') + '\n' # assigns p_creds to x, correctly
+            f.write(x)  # writes x to file, also correctly
 
 
 def main():
@@ -283,7 +259,7 @@ def main():
 
     ifile = options.ifile
     cidr = options.cidr
-    global ofile
+    # global ofile
     ofile = options.ofile
     ports = options.ports
 
@@ -307,8 +283,8 @@ def main():
         live_hosts(nm, addrs, iL)  # checks for live hosts
         admin_scanner(nm)  # checks for open admin ports
         check_vports()  # tests open ports for default credentials
-        # if ofile != None:
-        # rec_results(ofile)
+        if ofile is not None:
+            rec_results(ofile)
 
 
 if __name__ == "__main__":
