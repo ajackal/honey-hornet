@@ -6,13 +6,15 @@ import telnetlib
 from ftplib import FTP
 from pexpect import pxssh
 import optparse
+from threading import Thread
 
 
+totalhosts = []
 lhosts = []  # writes live hosts that are found here
-commonAdminPorts = [21, 554, 2332, 9443, 8000, 8080, 8081, 9000, 9191, 41592]
+commonAdminPorts = [21, 22, 554, 2332, 9443, 8000, 8080, 8081, 9000, 9191, 41592]
 vhosts = []  # hosts that have open admin ports
 
-users = ["admin", "", "user"]  # usernames to test
+users = ["admin", "", "user", "bob"]  # usernames to test
 passwords = ["12345", "", "password"]  # passwords to test
 
 
@@ -45,6 +47,11 @@ def live_hosts(nm, addrs, iL):
     for host, status in hosts_list:
         print('[+] {0} is {1}'.format(colored(host, 'yellow'), colored(status, 'green')))
         lhosts.append(host)  # adds live hosts to list to scan for open admin ports
+    global live
+    live = len(lhosts)
+    global percentage
+    percentage = 100 * (float(live) / float(total))
+    print "{0} out of {1} hosts are alive or {2}%".format(live, total, percentage)
 
 
 # This was the first function I wrote that got it right
@@ -100,8 +107,8 @@ def admin_scanner(nm):
 # Checks to see which open admin ports each host has
 # Then runs the function to check default credentials
 def check_vports():
-    print "[*] testing vulnerable host ip address..."
-    for vhost in vhosts:
+
+    def run_thread(vhost):
         print '[*] checking >> {0}'.format(vhost.ip)
         if 21 in vhost.ports:
             check_ftp(vhost)
@@ -109,6 +116,15 @@ def check_vports():
             check_ssh(vhost)
         if 2332 in vhost.ports:
             check_telnet(vhost)
+
+    print "[*] testing vulnerable host ip address..."
+
+    for vhost in vhosts:
+        t = Thread(target=run_thread, args=(vhost,))
+        t.start()
+
+    for vhost in vhosts:
+        t.join()
 
 
 # Trys to connect via Telnet with common credentials
@@ -121,7 +137,7 @@ def check_telnet(vhost):
         x = 0
         for password in passwords:
             try:  # open telnet connection(ipaddr, port, timeout)
-                t = telnetlib.Telnet(host, 23, 1)
+                t = telnetlib.Telnet(host, 2332, 1)
                 tl = t.read_some()
                 if "login: " in tl:
                     t.write(user + "\n")
@@ -217,6 +233,8 @@ def check_ssh(vhost):
 def rec_results(ofile):
     print '[*] recording results...'
     with open(ofile, 'a+') as f:
+        stats = 'live;total\n{0};{1}\n'.format(live, total)
+        f.write(stats)
         headers = 'host;protocol;port;user;password;misc\n'
         f.write(headers)
         for vhost in vhosts:
@@ -235,7 +253,7 @@ def main():
                       addresses')
     parser.add_option('-c', dest='cidr', type='string', help='cidr block or localhost')
     parser.add_option('-o', dest='ofile', type='string', help='output to this file,\
-                      if not defined will out put to stdout')
+                      if not defined will output to stdout')
     parser.add_option('-p', dest='ports', type='string', help='read from file for ports')
     (options, args) = parser.parse_args()
 
@@ -258,6 +276,11 @@ def main():
         if ifile is not None:
             addrs = ifile
             iL = True
+            with open(addrs, 'r') as f:
+                totalhosts = f.readlines()
+                global total
+                total = len(totalhosts)
+                print total
         else:
             addrs = cidr
             iL = False

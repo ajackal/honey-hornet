@@ -6,13 +6,13 @@ import telnetlib
 from ftplib import FTP
 from pexpect import pxssh
 import optparse
-from multiprocessing import Process
+from threading import Thread
 
 lhosts = []  # writes live hosts that are found here
 commonAdminPorts = [21, 22, 23, 25, 135, 3389]  # removed 80/443; causing problems
 vhosts = []  # hosts that have open admin ports
 
-users = ["mike", "", "admin"]  # usernames to test
+users = ["bob", "", "admin"]  # usernames to test
 passwords = ["", "password", "12345"]  # passwords to test
 
 
@@ -47,24 +47,7 @@ def live_hosts(nm, addrs, iL):
         lhosts.append(host)  # adds live hosts to list to scan for open admin ports
 
 
-# This was the first function I wrote that got it right
-# But it didn't display results in a useful manner
-# So I rewrote it to the function below this one.
-#
-# print "[*] scanning for open admin ports..."
-# for lhost in lhosts:
-#     x = 0
-#     while x < len(commonAdminPorts):
-#         print "[*] checking {0} for open port on {1}...".format(lhost, commonAdminPorts[x])
-#         nm.scan(lhost, str(commonAdminPorts[x]))
-#         x += 1
-#         lport = nm[lhost]['tcp'].keys()
-#         lport.sort()
-#         for port in lport:
-#             print '[+] port : %s\tstate : %s' % (port, nm[lhost]['tcp'][port]['state'])
-
 # Function scans for common admin ports that might be open
-# TODO: add multi-threading to speed up scan
 def admin_scanner(nm):
     print "[*] scanning for open admin ports..."
     x = 0
@@ -100,6 +83,7 @@ def admin_scanner(nm):
 # Checks to see which open admin ports each host has
 # Then runs the function to check default credentials
 def check_vports():
+
     def run_thread(vhost):
         print '[*] checking >> {0}'.format(vhost.ip)
         if 21 in vhost.ports:
@@ -108,11 +92,15 @@ def check_vports():
             check_ssh(vhost)
         if 23 in vhost.ports:
             check_telnet(vhost)
+
     print "[*] testing vulnerable host ip address..."
+
     for vhost in vhosts:
-        p = Process(target=run_thread, args=(vhost,))
-        p.start()
-        p.join()
+        t = Thread(target=run_thread, args=(vhost,))
+        t.start()
+
+    for vhost in vhosts:
+        t.join()
 
 
 # Trys to connect via Telnet with common credentials
