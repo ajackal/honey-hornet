@@ -9,11 +9,11 @@ import optparse
 
 
 lhosts = []  # writes live hosts that are found here
-commonAdminPorts = [21, 22, 23, 25, 135, 3389]  # removed 80/443; causing problems
+commonAdminPorts = [21, 554, 2332, 9443, 8000, 8080, 8081, 9000, 9191, 41592]
 vhosts = []  # hosts that have open admin ports
 
-users = ["mike", "", "admin"]  # usernames to test
-passwords = ["", "password", "12345"]  # passwords to test
+users = ["admin", "", "user"]  # usernames to test
+passwords = ["12345", "", "password"]  # passwords to test
 
 
 # define class for hosts with open admin ports
@@ -107,7 +107,7 @@ def check_vports():
             check_ftp(vhost)
         if 22 in vhost.ports:
             check_ssh(vhost)
-        if 23 in vhost.ports:
+        if 2332 in vhost.ports:
             check_telnet(vhost)
 
 
