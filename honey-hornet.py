@@ -6,9 +6,9 @@ import telnetlib
 from ftplib import FTP
 from pexpect import pxssh
 import optparse
-from threading import Thread, Semaphore
+from threading import Thread
 from datetime import datetime
-
+import socket
 
 totalhosts = []
 lhosts = []  # writes live hosts that are found here
@@ -26,6 +26,7 @@ class VulnHost(object):
     def __init__(self, ipaddr):
         self.ports = []
         self.p_creds = []
+        self.banner = []
         self.ip = ipaddr
 
     # function adds open admin port to list
@@ -35,6 +36,10 @@ class VulnHost(object):
     # ports with default credentials
     def put_creds(self, newcreds):
         self.p_creds.append(newcreds)
+
+    # adds port, banner to banner list
+    def put_banner(self, port, banner_txt):
+        self.banner.append('{0}:{1}'.format(port, banner_txt))
 
 
 class CheckAdminPorts(Thread):
@@ -69,7 +74,8 @@ class CheckAdminPorts(Thread):
                         print '[+] port : %s >> %s' % (colored(port, 'yellow'), colored(sop, 'green'))
                     else:
                         y += 1
-                        # print '[+] port : %s\t > %s' % (colored(port, 'yellow'), sop)  # displays closed ports
+                        # displays closed ports
+                        # print '[+] port : %s\t > %s' % (colored(port, 'yellow'), sop)
                 except Exception:
                     raise
                 if y == len(lport):
@@ -93,6 +99,10 @@ class CheckVports(Thread):
                 self.check_ssh(vhost)
             if 2332 in vhost.ports:
                 self.check_telnet(vhost)
+            http_ports = [8000, 8080, 8081, 9191]
+            for http_port in http_ports:
+                if http_port in vhost.ports:
+                    self.banner_grab(vhost, http_port)
 
     # Trys to connect via Telnet with common credentials
     # Then it prints the results of the connection attempt
@@ -172,7 +182,7 @@ class CheckVports(Thread):
     def check_ssh(self, vhost):
         host = vhost.ip
 
-        print "[*] testing SSH service on {0}...".format(vhost.ip)
+        # print "[*] testing SSH service on {0}...".format(vhost.ip)
 
         for user in users:
             try:
@@ -193,6 +203,17 @@ class CheckVports(Thread):
                         # add something here to close openSSH prompt
             except Exception as e:
                 print str(e)
+
+    # simple banner grab with sockets
+    # TODO: replace socket with httplib, much better
+    def banner_grab(self, vhost, http_port):
+        host = vhost.ip
+        s = socket.socket()
+        s.connect(('http://{0}'.format(host), http_port))
+        s.send('GET / HTTP/1.1\n\n')
+        banner_txt = s.recv(850)
+        print banner_txt
+        vhost.put_banner(http_port, banner_txt)
 
 
 def live_hosts(nm, addrs, iL):
@@ -278,7 +299,7 @@ def rec_results(ofile, iL):
         f.write(headers_creds)
         for vhost in vhosts:
                 # print vhost.p_creds  # returns correct values
-                x = str(vhost.p_creds).strip("['']") + '\n' # assigns p_creds to x, correctly
+                x = str(vhost.p_creds).strip("['']") + '\n'  # assigns p_creds to x, correctly
                 f.write(x)  # writes x to file, also correctly
 
 
