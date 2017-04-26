@@ -37,8 +37,8 @@ class VulnHost(object):
         self.p_creds.append(newcreds)
 
     # adds port, banner to banner list
-    def put_banner(self, port, banner_txt):
-        self.banner.append('{0}:{1}'.format(port, banner_txt))
+    def put_banner(self, port, banner_txt, status, reason, headers):
+        self.banner.append(':{0} {1} {2} {3}\n{4}\n'.format(port, status, reason, banner_txt, headers))
 
 
 # define a class to check for open ports
@@ -219,37 +219,37 @@ class CheckVports(Thread):
 
         r1 = conn.getresponse()
         banner_txt = r1.read(1000)
-        print r1.status, r1.reason, banner_txt
+        headers = r1.getheaders()
+        print r1.status, r1.reason
         # puts banner into the class instance of the host
-        vhost.put_banner(http_port, banner_txt)
+        vhost.put_banner(http_port, banner_txt, r1.status, r1.reason, headers)
 
 
 # Function parses either the default files or user input files
 # into the appropriate lists to run the program
 def inputs(ufile, pfile, ports):
-    inputs = [ufile, pfile, ports]
 
-    for x in inputs:
+    input_list = [ufile, pfile, ports]
+
+    global users
+    global passwords
+    global commonAdminPorts
+
+    for x in input_list:
         if x is not None:
             with open(x, 'r') as f:
                 if x is ufile:
-                    global users
                     users = f.read().splitlines()
                 elif x is pfile:
-                    global passwords
                     passwords = f.read().splitlines()
                 elif x is ports:
-                    global commonAdminPorts
                     commonAdminPorts = [int(x) for x in f.read().split()]
         else:
             with open('users.txt', 'r') as f:
-                global users
                 users = f.read().splitlines()
             with open('passwords.txt', 'r') as f:
-                global passwords
                 passwords = f.read().splitlines()
             with open('ports.txt', 'r') as f:
-                global commonAdminPorts
                 commonAdminPorts = [int(x) for x in f.read().split()]
 
 
@@ -272,7 +272,7 @@ def live_hosts(nm, addrs, iL):
         live = len(lhosts)
         global percentage
         percentage = 100 * (float(live) / float(total))
-        print "{0} out of {1} hosts are alive or {2}%".format(live, total, percentage)
+        print "[+] {0} out of {1} hosts are alive or {2}%".format(live, total, percentage)
 
 
 # splits the list of hosts into two separate lists
@@ -322,23 +322,28 @@ def rec_results(ofile, iL):
         if iL is True:
             stats = 'live,total\n{0},{1}\n'.format(live, total)
             f.write(stats)
-        headers_ports = 'host,port,status\n'
+        headers_ports = 'host,port,status,header\n'
         f.write(headers_ports)
         for vhost in vhosts:
             for port in vhost.ports:
                 for x in vhost.banner:
                     if str(port) in x:
-                        y = str(vhost.ip) + ',' + str(port) + ",open," + str(x) + '\n'
+                        y = str(vhost.ip) + ',' + str(port) + ",open,yes\n"
                         f.write(y)
                     else:
-                        y = str(vhost.ip) + ',' + str(port) + ",open\n"
+                        y = str(vhost.ip) + ',' + str(port) + ",open,no\n"
                         f.write(y)
         headers_creds = 'host,protocol,port,user,password,misc\n'
         f.write(headers_creds)
         for vhost in vhosts:
-                # print vhost.p_creds  # returns correct values
-                x = str(vhost.p_creds).strip("['']") + '\n'  # assigns p_creds to x, correctly
-                f.write(x)  # writes x to file, also correctly
+            # print vhost.p_creds  # returns correct values
+            x = str(vhost.p_creds).strip("['']") + '\n'  # assigns p_creds to x, correctly
+            f.write(x)  # writes x to file, also correctly
+            bfile = 'banners_' + ofile
+            with open(bfile, 'a+') as b:
+                for x in vhost.banner:
+                    y = str(vhost.ip) + ' ' + str(x)
+                    b.write(y)
 
 
 def main():
@@ -360,7 +365,6 @@ def main():
     ufile = options.ufile
     pfile = options.pfile
     ports = options.ports
-
 
     inputs(ufile, pfile, ports)
 
