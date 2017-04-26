@@ -8,17 +8,20 @@ from pexpect import pxssh
 import optparse
 from threading import Thread
 from datetime import datetime
-import socket
+import httplib
 
 totalhosts = []  # total number of hosts, for calculating percentages
 lhosts = []  # writes live hosts that are found here
 vhosts = []  # hosts that have open admin ports
 
 
-# define class for hosts with open admin ports
+# define class for each vulnerable host
 class VulnHost(object):
     # defines hosts ip address
-    # creates ports dictionary
+    # creates ports list
+    # creates a credentials list
+    # creates a list to hold banners
+    # assigns itself the vulnerable IP
     def __init__(self, ipaddr):
         self.ports = []
         self.p_creds = []
@@ -38,13 +41,21 @@ class VulnHost(object):
         self.banner.append('{0}:{1}'.format(port, banner_txt))
 
 
+# define a class to check for open ports
 class CheckAdminPorts(Thread):
 
     def __init__(self, nm, lhosts):
+        # starts the Thread
+        # assigns the list of live hosts
+        # assigns NMAP
         Thread.__init__(self)
         self.lhosts = lhosts
         self.nm = nm
 
+    # Function runs automatically after the class is instantiated
+    # Tests all live host for open 'admin' ports
+    # if an open port is found, it instantiates a class for that host
+    # and records all the open ports
     def run(self):
         print "[*] scanning for open admin ports..."
         x = 0
@@ -67,8 +78,6 @@ class CheckAdminPorts(Thread):
                         print '[+] port : %s >> %s' % (colored(port, 'yellow'), colored(sop, 'green'))
                     else:
                         y += 1
-                        # displays closed ports
-                        # print '[+] port : %s\t > %s' % (colored(port, 'yellow'), sop)
                 except Exception:
                     raise
                 if y == len(lport):
@@ -83,6 +92,9 @@ class CheckVports(Thread):
         Thread.__init__(self)
         self.vhosts = vhosts
 
+    # Function runs automatically after the class is instantiated
+    # Checks to see what vulnerable ports is open for each host
+    # Then runs the appropriate function to test credentials
     def run(self):
         for vhost in self.vhosts:
             print '[*] checking >> {0}'.format(vhost.ip)
@@ -92,12 +104,12 @@ class CheckVports(Thread):
                 self.check_ssh(vhost)
             if 2332 in vhost.ports:
                 self.check_telnet(vhost)
-            # http_ports = [8000, 8080, 8081, 9191]
-            # for http_port in http_ports:
-            #     if http_port in vhost.ports:
-            #         self.banner_grab(vhost, http_port)
+            http_ports = [8000, 8080, 8081, 9191]
+            for http_port in http_ports:
+                if http_port in vhost.ports:
+                    self.banner_grab(vhost, http_port)
 
-    # Trys to connect via Telnet with common credentials
+    # Tries to connect via Telnet with common credentials
     # Then it prints the results of the connection attempt
     def check_telnet(self, vhost):
         host = vhost.ip
@@ -120,7 +132,7 @@ class CheckVports(Thread):
                             newcreds = host + ",telnet,23," + user + "," + passwords[x]
                             vhost.put_creds(newcreds)
                             print "[!] Success for TELNET! host: {0}, user: {1}, password: {2}".format(host,
-                                                            colored(user,'yellow'), colored(passwords[x],'green'))
+                                                                colored(user, 'yellow'), colored(passwords[x], 'green'))
                             break
                     else:
                         break
@@ -135,6 +147,8 @@ class CheckVports(Thread):
                             # print "[!] ", e  # prints thrown exception, for debug
                             # TODO: fix looping issue, password found, continues to test passwords
 
+    # Function checks the FTP service for all users and passwords given
+    # also tests for anonymous log-ins and does an FTP banner grab
     def check_ftp(self, vhost):
         host = vhost.ip
         # print "[*] testing ftp connection on {0}...".format(host)
@@ -149,7 +163,6 @@ class CheckVports(Thread):
             print "[+] FTP server responded with {0}".format(fw)
         except Exception as e:
             print "[!] Anonymous FTP login failed: {0}".format(e)
-            pass
         for user in users:
             x = 0
             while x < len(passwords):
@@ -172,6 +185,7 @@ class CheckVports(Thread):
                     if x == len(passwords):
                         print "[!] Password not found."
 
+    # Function tests the SSH service with all of the users and passwords given
     def check_ssh(self, vhost):
         host = vhost.ip
 
@@ -197,18 +211,21 @@ class CheckVports(Thread):
             except Exception as e:
                 print str(e)
 
-    # simple banner grab with sockets
-    # TODO: replace socket with httplib, much better
-    # def banner_grab(self, vhost, http_port):
-    #     host = vhost.ip
-    #     s = socket.socket()
-    #     s.connect(('http://{0}'.format(host), http_port))
-    #     s.send('GET / HTTP/1.1\n\n')
-    #     banner_txt = s.recv(850)
-    #     print banner_txt
-    #     vhost.put_banner(http_port, banner_txt)
+    # simple banner grab with httplib
+    def banner_grab(self, vhost, http_port):
+        host = vhost.ip
+        conn = httplib.HTTPConnection(host, http_port)
+        conn.request("GET", "/")
+
+        r1 = conn.getresponse()
+        banner_txt = r1.read(1000)
+        print r1.status, r1.reason, banner_txt
+        # puts banner into the class instance of the host
+        vhost.put_banner(http_port, banner_txt)
 
 
+# Function parses either the default files or user input files
+# into the appropriate lists to run the program
 def inputs(ufile, pfile, ports):
     inputs = [ufile, pfile, ports]
 
@@ -236,37 +253,9 @@ def inputs(ufile, pfile, ports):
                 commonAdminPorts = [int(x) for x in f.read().split()]
 
 
-    # inputs = [ufile, pfile, ports]
-    #
-    # for x in inputs:
-    #     if x is not None:
-    #         try:
-    #             with open(x, 'r') as f:
-    #                 if x is ufile:
-    #                     users = f.readlines()
-    #                 elif x is pfile:
-    #                     passwords = f.readlines()
-    #                 elif x is ports:
-    #                     commonAdminPorts = f.readlines()
-    #         except IOError as e:
-    #             print "[!] There was an error reading input files: {0}".format(e)
-    #     else:
-    #         try:
-    #             with open('users.txt', 'r') as f:
-    #                 users = f.readlines()
-    #             with open('passwords.txt', 'r') as f:
-    #                 passwords = f.readlines()
-    #             with open('ports.txt', 'r') as f:
-    #                 commonAdminPorts = f.readlines()
-    #             return users, passwords, commonAdminPorts
-    #         except IOError as e:
-    #             print "[!] Standard input files not found! Check file exists in local directory {0}".format(e)
-    # try:
-    #     return users, passwords, commonAdminPorts
-    # except Exception as e:
-    #     print e
-
-
+# Function scans the list or CIDR block to see which hosts are alive
+# writes the live hosts to the 'lhosts' list
+# also calculates the percentage of how many hosts are alive
 def live_hosts(nm, addrs, iL):
     print "[*] scanning for live hosts..."
     if iL is False:
@@ -286,12 +275,17 @@ def live_hosts(nm, addrs, iL):
         print "{0} out of {1} hosts are alive or {2}%".format(live, total, percentage)
 
 
+# splits the list of hosts into two separate lists
+# one list is used when creating each thread
 def split_hosts(hosts):
     half = len(hosts)/2
     return hosts[:half], hosts[half:]
 
 
 # Function scans for common admin ports that might be open
+# splits live hosts lists in two
+# creates two threads, one for each new list
+# this speeds up scanning by 50%
 def admin_scanner(nm):
     print "[*] scanning for open admin ports..."
 
@@ -304,6 +298,10 @@ def admin_scanner(nm):
     t2.join()
 
 
+# Function tests hosts for default credentials on open 'admin' ports
+# splits the list of vulnerable hosts in two
+# creates two threads, one for each list
+# speeds up scanning by 50%
 def run_thread():
     vhosts0, vhosts1 = split_hosts(vhosts)
 
@@ -317,6 +315,7 @@ def run_thread():
     t2.join()
 
 
+# Function records all of the results from each instance of the class in to a csv report
 def rec_results(ofile, iL):
     print '[*] recording results...'
     with open(ofile, 'a+') as f:
@@ -327,8 +326,13 @@ def rec_results(ofile, iL):
         f.write(headers_ports)
         for vhost in vhosts:
             for port in vhost.ports:
-                y = str(vhost.ip) + ',' + str(port) + ",open\n"
-                f.write(y)
+                for x in vhost.banner:
+                    if str(port) in x:
+                        y = str(vhost.ip) + ',' + str(port) + ",open," + str(x) + '\n'
+                        f.write(y)
+                    else:
+                        y = str(vhost.ip) + ',' + str(port) + ",open\n"
+                        f.write(y)
         headers_creds = 'host,protocol,port,user,password,misc\n'
         f.write(headers_creds)
         for vhost in vhosts:
