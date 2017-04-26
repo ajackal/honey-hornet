@@ -10,13 +10,9 @@ from threading import Thread
 from datetime import datetime
 import socket
 
-totalhosts = []
+totalhosts = []  # total number of hosts, for calculating percentages
 lhosts = []  # writes live hosts that are found here
-commonAdminPorts = [21, 22, 554, 2332, 9443, 8000, 8080, 8081, 9000, 9191, 41592]
 vhosts = []  # hosts that have open admin ports
-
-users = ['admin', '', 'user', 'bob']  # usernames to test
-passwords = ['12345', '', 'password']  # passwords to test
 
 
 # define class for hosts with open admin ports
@@ -57,11 +53,8 @@ class CheckAdminPorts(Thread):
             b = 'a' + str(x)  # unique class identifier
             print "[*] checking {0} for open admin ports...".format(lhost)
             self.nm.scan(lhost, str(commonAdminPorts))  # nmap scan command
-            try:
-                lport = self.nm[lhost]['tcp'].keys()  # retrieves tcp port results from scan
-                lport.sort()  # sorts ports
-            except Exception:
-                raise
+            lport = self.nm[lhost]['tcp'].keys()  # retrieves tcp port results from scan
+            lport.sort()  # sorts ports
             y = 0
             for port in lport:
                 try:
@@ -99,10 +92,10 @@ class CheckVports(Thread):
                 self.check_ssh(vhost)
             if 2332 in vhost.ports:
                 self.check_telnet(vhost)
-            http_ports = [8000, 8080, 8081, 9191]
-            for http_port in http_ports:
-                if http_port in vhost.ports:
-                    self.banner_grab(vhost, http_port)
+            # http_ports = [8000, 8080, 8081, 9191]
+            # for http_port in http_ports:
+            #     if http_port in vhost.ports:
+            #         self.banner_grab(vhost, http_port)
 
     # Trys to connect via Telnet with common credentials
     # Then it prints the results of the connection attempt
@@ -206,14 +199,72 @@ class CheckVports(Thread):
 
     # simple banner grab with sockets
     # TODO: replace socket with httplib, much better
-    def banner_grab(self, vhost, http_port):
-        host = vhost.ip
-        s = socket.socket()
-        s.connect(('http://{0}'.format(host), http_port))
-        s.send('GET / HTTP/1.1\n\n')
-        banner_txt = s.recv(850)
-        print banner_txt
-        vhost.put_banner(http_port, banner_txt)
+    # def banner_grab(self, vhost, http_port):
+    #     host = vhost.ip
+    #     s = socket.socket()
+    #     s.connect(('http://{0}'.format(host), http_port))
+    #     s.send('GET / HTTP/1.1\n\n')
+    #     banner_txt = s.recv(850)
+    #     print banner_txt
+    #     vhost.put_banner(http_port, banner_txt)
+
+
+def inputs(ufile, pfile, ports):
+    inputs = [ufile, pfile, ports]
+
+    for x in inputs:
+        if x is not None:
+            with open(x, 'r') as f:
+                if x is ufile:
+                    global users
+                    users = f.read().splitlines()
+                elif x is pfile:
+                    global passwords
+                    passwords = f.read().splitlines()
+                elif x is ports:
+                    global commonAdminPorts
+                    commonAdminPorts = [int(x) for x in f.read().split()]
+        else:
+            with open('users.txt', 'r') as f:
+                global users
+                users = f.read().splitlines()
+            with open('passwords.txt', 'r') as f:
+                global passwords
+                passwords = f.read().splitlines()
+            with open('ports.txt', 'r') as f:
+                global commonAdminPorts
+                commonAdminPorts = [int(x) for x in f.read().split()]
+
+
+    # inputs = [ufile, pfile, ports]
+    #
+    # for x in inputs:
+    #     if x is not None:
+    #         try:
+    #             with open(x, 'r') as f:
+    #                 if x is ufile:
+    #                     users = f.readlines()
+    #                 elif x is pfile:
+    #                     passwords = f.readlines()
+    #                 elif x is ports:
+    #                     commonAdminPorts = f.readlines()
+    #         except IOError as e:
+    #             print "[!] There was an error reading input files: {0}".format(e)
+    #     else:
+    #         try:
+    #             with open('users.txt', 'r') as f:
+    #                 users = f.readlines()
+    #             with open('passwords.txt', 'r') as f:
+    #                 passwords = f.readlines()
+    #             with open('ports.txt', 'r') as f:
+    #                 commonAdminPorts = f.readlines()
+    #             return users, passwords, commonAdminPorts
+    #         except IOError as e:
+    #             print "[!] Standard input files not found! Check file exists in local directory {0}".format(e)
+    # try:
+    #     return users, passwords, commonAdminPorts
+    # except Exception as e:
+    #     print e
 
 
 def live_hosts(nm, addrs, iL):
@@ -235,24 +286,12 @@ def live_hosts(nm, addrs, iL):
         print "{0} out of {1} hosts are alive or {2}%".format(live, total, percentage)
 
 
-# This was the first function I wrote that got it right
-# But it didn't display results in a useful manner
-# So I rewrote it to the function below this one.
-#
-# print "[*] scanning for open admin ports..."
-# for lhost in lhosts:
-#     x = 0
-#     while x < len(commonAdminPorts):
-#         print "[*] checking {0} for open port on {1}...".format(lhost, commonAdminPorts[x])
-#         nm.scan(lhost, str(commonAdminPorts[x]))
-#         x += 1
-#         lport = nm[lhost]['tcp'].keys()
-#         lport.sort()
-#         for port in lport:
-#             print '[+] port : %s\tstate : %s' % (port, nm[lhost]['tcp'][port]['state'])
+def split_hosts(hosts):
+    half = len(hosts)/2
+    return hosts[:half], hosts[half:]
+
 
 # Function scans for common admin ports that might be open
-# TODO: add multi-threading to speed up scan
 def admin_scanner(nm):
     print "[*] scanning for open admin ports..."
 
@@ -263,11 +302,6 @@ def admin_scanner(nm):
     t2.start()
     t1.join()
     t2.join()
-
-
-def split_hosts(hosts):
-    half = len(hosts)/2
-    return hosts[:half], hosts[half:]
 
 
 def run_thread():
@@ -305,23 +339,26 @@ def rec_results(ofile, iL):
 
 def main():
     start_time = datetime.now()
-    new_pw = raw_input("Password to add to list: ")
-    passwords.append(new_pw)
 
-    parser = optparse.OptionParser('usage: %prog [-i <inputfile> OR -c <CIDR block>] -o <\
-                                   output file (optional)>')
-    parser.add_option('-i', dest='ifile', type='string', help='read from file for IP\
-                      addresses')
-    parser.add_option('-c', dest='cidr', type='string', help='cidr block or localhost')
-    parser.add_option('-o', dest='ofile', type='string', help='output to this file,\
-                      if not defined will output to stdout')
-    parser.add_option('-p', dest='ports', type='string', help='read from file for ports')
+    parser = optparse.OptionParser('usage: %prog [-i <file listing IPs> OR -c <CIDR block>] -u <users.txt> '
+                                   '-p <passwords.txt> -o <output file (optional)>')
+    parser.add_option('-i', dest='ifile', type='string', help='import IP addresses from file, cannot be used with -c')
+    parser.add_option('-c', dest='cidr', type='string', help='cidr block or localhost, cannot be used with -i')
+    parser.add_option('-u', dest='ufile', type='string', help='imports users from file; else: uses default list')
+    parser.add_option('-p', dest='pfile', type='string', help='imports passwords from file; else: uses default list')
+    parser.add_option('-o', dest='ofile', type='string', help='output to this file; else output to stdout')
+    parser.add_option('-a', dest='ports', type='string', help='import ports from file')
     (options, args) = parser.parse_args()
 
     ifile = options.ifile
     cidr = options.cidr
     ofile = options.ofile
+    ufile = options.ufile
+    pfile = options.pfile
     ports = options.ports
+
+
+    inputs(ufile, pfile, ports)
 
     if ifile is not None and cidr is not None:
         print "[!] Cannot have two input options!"
