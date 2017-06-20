@@ -314,6 +314,7 @@ def admin_scanner(nm):
 # splits the list of vulnerable hosts in two
 # creates two threads, one for each list
 # speeds up scanning by 50%
+# now creates four threads.
 def run_thread():
     print "[*] Testing vulnerable host ip addresses..."
 
