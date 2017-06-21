@@ -9,7 +9,6 @@ import optparse
 from threading import Thread
 from datetime import datetime
 import httplib
-from datetime import datetime
 
 
 totalhosts = []  # total number of hosts, for calculating percentages
@@ -57,7 +56,7 @@ class CheckAdminPorts(Thread):
     # Function runs automatically after the class is instantiated
     # Tests all live host for open 'admin' ports
     # if an open port is found, it instantiates a class for that host
-    # and records all the open ports
+    # and records all the open or filtered ports
     def run(self):
         print "[*] scanning for open admin ports..."
         x = 0
@@ -76,7 +75,7 @@ class CheckAdminPorts(Thread):
                         if b not in vhosts:  # checks to see if host already has an object
                             b = VulnHost(lhost)  # creates an object for that host if it doesn't exist
                             vhosts.append(b)  # appends vulnerable host to list
-                        b.add_vport(port)  # adds open port to dictionary with value: True
+                        b.add_vport(port)
                         print '[+] port : %s >> %s' % (colored(port, 'yellow'), colored(sop, 'green'))
                     else:
                         y += 1
@@ -122,8 +121,6 @@ class CheckVports(Thread):
             port = 2332
         else:
             port = 23
-        # print "[*] testing telnet connection on {0}...".format(host)
-        # while success is False: # causes infinite loop if connection refused
         for user in users:
             x = 0
             for password in passwords:
@@ -383,8 +380,8 @@ def rec_results(ofile, iL):
 
 
 def log_error(error):
-    time_now = dateime.now()
-    log_error = time_now + ":" + error
+    time_now = datetime.now()
+    log_error = str(time_now) + ":" + str(error) + "\n"
     with open('error.log', 'a') as f:
         f.write(log_error)
         print "[*] Error logged: {0}".format(error)
@@ -435,6 +432,7 @@ def main():
             iL = False
         try:
             live_hosts(nm, addrs, iL)  # checks for live hosts
+            # TODO: add option to disable port scan and just test ports listed in file.
             admin_scanner(nm)  # checks for open admin ports
             run_thread()
         except Exception as e:
