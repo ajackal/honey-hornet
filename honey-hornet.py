@@ -271,22 +271,27 @@ def inputs(ufile, pfile, ports):
 # also calculates the percentage of how many hosts are alive
 def live_hosts(nm, addrs, iL):
     print "[*] scanning for live hosts..."
-    if iL is False:
-        nm.scan(hosts=addrs, arguments='-sn')  # ping scan to check for live hosts
-    else:
-        nm.scan(arguments='-sn -iL ' + addrs)
-    hosts_list = [(x, nm[x]['status']['state']) for x in nm.all_hosts()]
-    # prints the hosts that are alive
-    for host, status in hosts_list:
-        print('[+] {0} is {1}'.format(colored(host, 'yellow'), colored(status, 'green')))
-        lhosts.append(host)  # adds live hosts to list to scan for open admin ports
-    if iL is True:
-        global live
-        live = len(lhosts)
-        global percentage
-        percentage = 100 * (float(live) / float(total))
-        print "[+] {0} out of {1} hosts are alive or {2}%".format(live, total, percentage)
-
+    try:
+        if iL is False:
+            nm.scan(hosts=addrs, arguments='-sn')  # ping scan to check for live hosts
+        else:
+            nm.scan(arguments='-sn -iL ' + addrs)
+    except Exception as error:
+        log_error(error)
+    try:
+        hosts_list = [(x, nm[x]['status']['state']) for x in nm.all_hosts()]
+        # prints the hosts that are alive
+        for host, status in hosts_list:
+            print('[+] {0} is {1}'.format(colored(host, 'yellow'), colored(status, 'green')))
+            lhosts.append(host)  # adds live hosts to list to scan for open admin ports
+        if iL is True:
+            global live
+            live = len(lhosts)
+            global percentage
+            percentage = 100 * (float(live) / float(total))
+            print "[+] {0} out of {1} hosts are alive or {2}%".format(live, total, percentage)
+    except Exception as error:
+        log_error(error)
 
 # splits the list of hosts into two separate lists
 # one list is used when creating each thread
@@ -301,22 +306,24 @@ def split_hosts(hosts):
 # this speeds up scanning by 50%
 def admin_scanner(nm):
     print "[*] scanning for open admin ports..."
-    lhosts0, lhosts1 = split_hosts(lhosts)
-    lhosts0a, lhosts0b = split_hosts(lhosts0)
-    lhosts1a, lhosts1b = split_hosts(lhosts1)
-    t0a = CheckAdminPorts(nm, lhosts0a)
-    t0b = CheckAdminPorts(nm, lhosts0b)
-    t1a = CheckAdminPorts(nm, lhosts1a)
-    t1b = CheckAdminPorts(nm, lhosts1b)
-    t0a.start()
-    t0b.start()
-    t1a.start()
-    t1b.start()
-    t0a.join()
-    t0b.join()
-    t1a.join()
-    t1b.join()
-
+    try:
+        lhosts0, lhosts1 = split_hosts(lhosts)
+        lhosts0a, lhosts0b = split_hosts(lhosts0)
+        lhosts1a, lhosts1b = split_hosts(lhosts1)
+        t0a = CheckAdminPorts(nm, lhosts0a)
+        t0b = CheckAdminPorts(nm, lhosts0b)
+        t1a = CheckAdminPorts(nm, lhosts1a)
+        t1b = CheckAdminPorts(nm, lhosts1b)
+        t0a.start()
+        t0b.start()
+        t1a.start()
+        t1b.start()
+        t0a.join()
+        t0b.join()
+        t1a.join()
+        t1b.join()
+    except Exception as error:
+        log_error(error)
 
 # Function tests hosts for default credentials on open 'admin' ports
 # splits the list of vulnerable hosts in two
@@ -325,21 +332,24 @@ def admin_scanner(nm):
 # now creates four threads.
 def run_thread():
     print "[*] Testing vulnerable host ip addresses..."
-    vhosts0, vhosts1 = split_hosts(vhosts)
-    vhosts0a, vhosts0b = split_hosts(vhosts0)
-    vhosts1a, vhosts1b = split_hosts(vhosts1)
-    t0a = CheckVports(vhosts0a)
-    t0b = CheckVports(vhosts0b)
-    t1a = CheckVports(vhosts1a)
-    t1b = CheckVports(vhosts1b)
-    t0a.start()
-    t0b.start()
-    t1a.start()
-    t1b.start()
-    t0a.join()
-    t0b.join()
-    t1a.join()
-    t1b.join()
+    try:
+        vhosts0, vhosts1 = split_hosts(vhosts)
+        vhosts0a, vhosts0b = split_hosts(vhosts0)
+        vhosts1a, vhosts1b = split_hosts(vhosts1)
+        t0a = CheckVports(vhosts0a)
+        t0b = CheckVports(vhosts0b)
+        t1a = CheckVports(vhosts1a)
+        t1b = CheckVports(vhosts1b)
+        t0a.start()
+        t0b.start()
+        t1a.start()
+        t1b.start()
+        t0a.join()
+        t0b.join()
+        t1a.join()
+        t1b.join()
+    except Exception as error:
+        log_error(error)
 
 # Function records all of the results from each instance of the class in to a csv report
 def rec_results(ofile, iL):
