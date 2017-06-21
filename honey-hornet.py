@@ -9,6 +9,7 @@ import optparse
 from threading import Thread
 from datetime import datetime
 import httplib
+from datetime import datetime
 
 
 totalhosts = []  # total number of hosts, for calculating percentages
@@ -71,7 +72,7 @@ class CheckAdminPorts(Thread):
             for port in lport:
                 try:
                     sop = self.nm[lhost]['tcp'][port]['state']  # defines port state variable
-                    if sop == 'open':  # checks to see if status is open
+                    if sop != 'closed':  # checks to see if status is open
                         if b not in vhosts:  # checks to see if host already has an object
                             b = VulnHost(lhost)  # creates an object for that host if it doesn't exist
                             vhosts.append(b)  # appends vulnerable host to list
@@ -79,8 +80,8 @@ class CheckAdminPorts(Thread):
                         print '[+] port : %s >> %s' % (colored(port, 'yellow'), colored(sop, 'green'))
                     else:
                         y += 1
-                except Exception:
-                    raise
+                except Exception as error:
+                    log_error(error)
                 if y == len(lport):
                     print '[!] No open ports found.'
 
@@ -103,9 +104,11 @@ class CheckVports(Thread):
                 self.check_ftp(vhost)
             if 22 in vhost.ports:
                 self.check_ssh(vhost)
-            if 23 or 2332 in vhost.ports:
-                self.check_telnet(vhost)
-            http_ports = [8000, 8080, 8081, 9191]
+            telnet_ports = [23, 2332]
+            for telnet_port in telnet_ports:
+                if telnet_port in vhost.ports:
+                    self.check_telnet(vhost)
+            http_ports = [8000, 8080, 8081, 8090, 9191, 9443]
             for http_port in http_ports:
                 if http_port in vhost.ports:
                     self.banner_grab(vhost, http_port)
@@ -142,11 +145,12 @@ class CheckVports(Thread):
                             break
                     else:
                         break
-                except Exception as e:
-                    if "Connection refused" in e:
+                except Exception as error:
+                    if "Connection refused" in error:
+                        log_error(error)
                         break
                     else:
-                        # print e
+                        log_error(error)
                         x += 1
                         if x == len(passwords):
                             print "[!] Password not found."
@@ -167,8 +171,8 @@ class CheckVports(Thread):
             newcreds = host + ',ftp,21,anon,,' + fw
             vhost.put_creds(newcreds)
             print "[+] FTP server responded with {0}".format(fw)
-        except Exception as e:
-            print "[!] Anonymous FTP login failed: {0}".format(e)
+        except Exception as error:
+            log_error(error)
         for user in users:
             x = 0
             while x < len(passwords):
@@ -185,8 +189,8 @@ class CheckVports(Thread):
                         print "[!] Success for FTP! user: {0}, password: {1}".format(colored(user, 'yellow'),
                                                                                      colored(passwords[x], 'green'))
                     break
-                except Exception:
-                    # print "[!] Something went wrong: {0}".format(e)
+                except Exception as error:
+                    log_error(error)
                     x += 1
                     if x == len(passwords):
                         print "[!] Password not found."
@@ -209,30 +213,34 @@ class CheckVports(Thread):
                         vhost.put_creds(newcreds)
                         s.logout()
                         s.close()
-                    except Exception:
+                    except Exception as error:
+                        log_error(error)
                         pass
-                        # add something here to close openSSH prompt
-            except Exception as e:
-                print str(e)
+                        # add something here to close openSSH prompt (only occurs when using PyCharm on Linux)
+            except Exception as error:
+                log_error(error)
 
     # simple banner grab with httplib
     def banner_grab(self, vhost, http_port):
         host = vhost.ip
         print "[*] Grabbing banner from {0}".format(host)
-        conn = httplib.HTTPConnection(host, http_port)
-        conn.request("GET", "/")
-
-        r1 = conn.getresponse()
-        banner_txt = r1.read(1000)
-        headers = r1.getheaders()
-        print r1.status, r1.reason
-        # puts banner into the class instance of the host
-        vhost.put_banner(http_port, banner_txt, r1.status, r1.reason, headers)
+        try:
+            conn = httplib.HTTPConnection(host, http_port)
+            conn.request("GET", "/")
+            r1 = conn.getresponse()
+            banner_txt = r1.read(1000)
+            headers = r1.getheaders()
+            print r1.status, r1.reason
+            # puts banner into the class instance of the host
+            vhost.put_banner(http_port, banner_txt, r1.status, r1.reason, headers)
+        except Exception as error:
+            log_error(error)
 
 
 # Function parses either the default files or user input files
 # into the appropriate lists to run the program
 def inputs(ufile, pfile, ports):
+    # TODO: have ports file read to dictionary, key=port, value=protocol
 
     input_list = [ufile, pfile, ports]
 
@@ -317,7 +325,6 @@ def admin_scanner(nm):
 # now creates four threads.
 def run_thread():
     print "[*] Testing vulnerable host ip addresses..."
-
     vhosts0, vhosts1 = split_hosts(vhosts)
     vhosts0a, vhosts0b = split_hosts(vhosts0)
     vhosts1a, vhosts1b = split_hosts(vhosts1)
@@ -363,6 +370,14 @@ def rec_results(ofile, iL):
                 for x in vhost.banner:
                     y = str(vhost.ip) + ' ' + str(x)
                     b.write(y)
+
+
+def log_error(error):
+    time_now = dateime.now()
+    log_error = time_now + ":" + error
+    with open('error.log', 'a') as f:
+        f.write(log_error)
+        print "[*] Error logged: {0}".format(error)
 
 
 def main():
@@ -413,7 +428,7 @@ def main():
             admin_scanner(nm)  # checks for open admin ports
             run_thread()
         except Exception as e:
-            print '[!] there was an error!! {0}'.format(e)
+            log_error(error)
         finally:
             if ofile is not None:
                 rec_results(ofile, iL)
