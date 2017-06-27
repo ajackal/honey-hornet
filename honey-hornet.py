@@ -407,8 +407,7 @@ def main():
     parser.add_option('-o', dest='ofile', type='string', help='output to this file; else output to stdout')
     parser.add_option('-a', dest='ports', type='string', help='import ports from file')
     parser.add_option('-s', dest='services', type='string', help='services to scan, all by default')
-    parser.add_option('-t', dest='scan_type', type='integer', help='default=all, 1=scan if host is up, 2=port scanner'
-                                                                   '3=credential scanner')
+
     (options, args) = parser.parse_args()
 
     ifile = options.ifile
@@ -417,7 +416,6 @@ def main():
     ufile = options.ufile
     pfile = options.pfile
     ports = options.ports
-    services = options.services
 
     inputs(ufile, pfile, ports)
 
