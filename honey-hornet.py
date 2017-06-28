@@ -9,6 +9,7 @@ import optparse
 from threading import Thread
 from datetime import datetime
 import httplib
+import re
 
 
 totalhosts = []  # total number of hosts, for calculating percentages
@@ -110,7 +111,7 @@ class CheckVports(Thread):
             http_ports = [8000, 8080, 8081, 8090, 9191, 9443]
             for http_port in http_ports:
                 if http_port in vhost.ports:
-                    self.banner_grab(vhost, http_port)
+                    self.http_post_credential_check(vhost, http_port)
 
     # Tries to connect via Telnet with common credentials
     # Then it prints the results of the connection attempt
@@ -240,6 +241,95 @@ class CheckVports(Thread):
             vhost.put_banner(http_port, banner_txt, r1.status, r1.reason, headers)
         except Exception as error:
             log_error(error)
+
+    def http_post_credential_check(self, vhost, http_port):
+        host = vhost.ip
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0",\
+        "Content-Type": "text/xml", \
+        "Accept": "application/xml, text/xml, */*; q=0.01", \
+        "Accept-Language": "en-US,en;q=0.5", \
+        # "Referrer": "http://{0}:{1}".format(host, port), \
+        "X-Requested-With": "XMLHttpRequest", \
+        "Connection": "close"}
+        body_public = '/xml/GetPublic.xml'
+        body_connect = '/xml/Connect.xml'
+
+        xml_public = "xml/Public.xml"
+        xml_connect = "xml/Connect.xml"
+
+
+        def get_pass_from_xml():
+            with open(xml_connect) as f:
+                x = f.read()
+                m = re.findall("CDATA\[(?P<password>\w*)\]", x)
+                if m:
+                    password = m[0]
+                    print password
+                    return password
+                else:
+                    print "nothing found"
+
+
+        def read_xml(xml_file):
+            with open(xml_file, 'r') as f:
+                xml = f.read()
+                return xml
+
+        # def post_credentials(vhost, http_port):
+        try:
+            conn = httplib.HTTPConnection(host, http_port)
+            print "[*] Attempting to validate credentials via HTTP-POST..."
+            method = "HTTP-POST"
+            xml = read_xml(xml_connect)
+            conn.request("POST", body_connect, xml, headers)
+            response = conn.getresponse()
+            print response.status, response.reason
+            data = response.read()
+            if "message='OK'" in data:
+                password = get_pass_from_xml()
+                rec_results(host, port, password, method)
+            else:
+                m = re.findall("message\=\'(?P<error>\w*\/\w*)\'", str(data))
+                if m:
+                    error = m[0]
+                    print "[*] Server returned: {0}".format(error)
+                else:
+                    print "[*] Server returned: {0}".format(data)
+            conn.close()
+        except Exception as e:
+            m = re.findall("message\=\'(?P<error>\w*)\'", str(e))
+            if m:
+                error = m[0]
+                rec_error(host, port, method, error)
+
+
+        # def get_host_list():
+        #     host_list_file = sys.argv[1]
+        #     with open(host_list_file, 'r') as f:
+        #         host_list = f.readlines()
+        #         host_list = [i.strip('\r\n') for i in host_list]
+        #     return host_list
+
+        # def run_credential_check():
+        #     hosts = get_host_list()
+        #     for host in hosts:
+        #         post_credentials(host)
+
+
+        def rec_error(host, port, method, e):
+            print "[*] Recording error:"
+            event = "[*] Error raised: host={0},port={1},method={2},error={3}\n".format(host, port, method, e)
+            print event
+            with open("error.log", 'a') as f:
+                f.write(event)
+
+
+        def rec_results(host, port, password, method):
+            print "[*] Recording successful attempt:"
+            event = "[*] Password recovered: host={0},port={1},password={2},method={3}\n".format(host, port, password, method)
+            print event
+            with open("recovered_passwords.log", 'a') as f:
+                f.write(event)
 
 
 # Function parses either the default files or user input files
