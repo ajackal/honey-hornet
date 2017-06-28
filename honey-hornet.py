@@ -277,7 +277,7 @@ class CheckVports(Thread):
 
         # def post_credentials(vhost, http_port):
         try:
-            conn = httplib.HTTPConnection(host, http_port)
+            conn = httplib.HTTPConnection(host, http_port, timeout=25)
             print "[*] Attempting to validate credentials via HTTP-POST..."
             method = "HTTP-POST"
             xml = read_xml(xml_connect)
