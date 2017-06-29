@@ -138,14 +138,18 @@ class CheckVports(Thread):
                     # tm = t.read_very_eager()
                     # print tm
                     t.read_until("OK")
-                    t.close
                     po = t.read_all()
                     print po
                     if "OK" in po:
-                        newcreds = host + ",telnet," + port + "," + user + "," + passwords[x]
+                        newcreds = "host={0}, protocol=telnet, port={1}, user={2}, password={3}".format(host,
+                                                                                                        port, user,
+                                                                                                        passwords[x])
                         vhost.put_creds(newcreds)
                         print "[!] Success for Telnet! host: {0}, user: {1}, password: {2}".format(host,
-                                                            colored(user, 'yellow'), colored(passwords[x], 'green'))
+                                                                                                   colored(user,
+                                                                                                           'yellow'),
+                                                                                                   colored(passwords[x],
+                                                                                                           'green'))
                         t.write("quit\n")
                         break
                     else:
@@ -208,13 +212,12 @@ class CheckVports(Thread):
         for user in users:
             try:
                 for password in passwords:
-                    found = False
+                    # found = False
                     try:
                         s = pxssh.pxssh()
                         s.login(host, user, password)
                         print "[!] Success for SSH! user: {0}, password: {1}".format(colored(user, 'yellow'),
-                                                                                     colored(password,
-                                                                                             'green'))
+                                                                                     colored(password, 'green'))
                         newcreds = host + ',ssh,22,' + user + ',' + password
                         vhost.put_creds(newcreds)
                         s.logout()
@@ -244,19 +247,17 @@ class CheckVports(Thread):
 
     def http_post_credential_check(self, vhost, http_port):
         host = vhost.ip
-        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0",\
-        "Content-Type": "text/xml", \
-        "Accept": "application/xml, text/xml, */*; q=0.01", \
-        "Accept-Language": "en-US,en;q=0.5", \
-        # "Referrer": "http://{0}:{1}".format(host, port), \
-        "X-Requested-With": "XMLHttpRequest", \
-        "Connection": "close"}
-        body_public = '/xml/GetPublic.xml'
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0",
+                   "Content-Type": "text/xml","Accept": "application/xml, text/xml, */*; q=0.01",
+                   "Accept-Language": "en-US,en;q=0.5", "X-Requested-With": "XMLHttpRequest", "Connection": "close"}
+
+        # body_public = '/xml/GetPublic.xml'
         body_connect = '/xml/Connect.xml'
 
-        xml_public = "xml/Public.xml"
+        # xml_public = "xml/Public.xml"
         xml_connect = "xml/Connect.xml"
 
+        method = "HTTP-POST"
 
         def get_pass_from_xml():
             with open(xml_connect) as f:
@@ -269,17 +270,31 @@ class CheckVports(Thread):
                 else:
                     print "nothing found"
 
-
         def read_xml(xml_file):
             with open(xml_file, 'r') as f:
                 xml = f.read()
                 return xml
 
-        # def post_credentials(vhost, http_port):
+        def rec_error(host, port, method, e):
+            print "[*] Recording error:"
+            event = "[*] Error raised: host={0},port={1},method={2},error={3}\n".format(host, port, method, e)
+            print event
+            with open("error.log", 'a') as f:
+                f.write(event)
+
+        def log_results(host, port, password, method):
+            print "[*] Recording successful attempt:"
+            event = "[*] Password recovered: host={0},port={1},password={2},method={3}\n".format(host, port,
+                                                                                                 password,
+                                                                                                 method)
+            print event
+            with open("recovered_passwords.log", 'a') as f:
+                f.write(event)
+
+        # def post_credentials(host, http_port):
         try:
             conn = httplib.HTTPConnection(host, http_port, timeout=25)
             print "[*] Attempting to validate credentials via HTTP-POST..."
-            method = "HTTP-POST"
             xml = read_xml(xml_connect)
             conn.request("POST", body_connect, xml, headers)
             response = conn.getresponse()
@@ -287,9 +302,9 @@ class CheckVports(Thread):
             data = response.read()
             if "message='OK'" in data:
                 password = get_pass_from_xml()
-                rec_results(host, port, password, method)
+                log_results(host, http_port, password, method)
             else:
-                m = re.findall("message\=\'(?P<error>\w*\/\w*)\'", str(data))
+                m = re.findall("message='(?P<error>\w\s/\s\w)'", str(data))
                 if m:
                     error = m[0]
                     print "[*] Server returned: {0}".format(error)
@@ -297,11 +312,10 @@ class CheckVports(Thread):
                     print "[*] Server returned: {0}".format(data)
             conn.close()
         except Exception as e:
-            m = re.findall("message\=\'(?P<error>\w*)\'", str(e))
+            m = re.findall("message='(?P<error>\w\s/\s\w)'", str(e))
             if m:
                 error = m[0]
-                rec_error(host, port, method, error)
-
+                rec_error(host, http_port, method, error)
 
         # def get_host_list():
         #     host_list_file = sys.argv[1]
@@ -314,22 +328,6 @@ class CheckVports(Thread):
         #     hosts = get_host_list()
         #     for host in hosts:
         #         post_credentials(host)
-
-
-        def rec_error(host, port, method, e):
-            print "[*] Recording error:"
-            event = "[*] Error raised: host={0},port={1},method={2},error={3}\n".format(host, port, method, e)
-            print event
-            with open("error.log", 'a') as f:
-                f.write(event)
-
-
-        def rec_results(host, port, password, method):
-            print "[*] Recording successful attempt:"
-            event = "[*] Password recovered: host={0},port={1},password={2},method={3}\n".format(host, port, password, method)
-            print event
-            with open("recovered_passwords.log", 'a') as f:
-                f.write(event)
 
 
 # Function parses either the default files or user input files
@@ -388,6 +386,7 @@ def live_hosts(nm, addrs, iL):
     except Exception as error:
         log_error(error)
 
+
 # splits the list of hosts into two separate lists
 # one list is used when creating each thread
 def split_hosts(hosts):
@@ -401,24 +400,31 @@ def split_hosts(hosts):
 # this speeds up scanning by 50%
 def admin_scanner(nm):
     print "[*] scanning for open admin ports..."
-    try:
-        lhosts0, lhosts1 = split_hosts(lhosts)
-        lhosts0a, lhosts0b = split_hosts(lhosts0)
-        lhosts1a, lhosts1b = split_hosts(lhosts1)
-        t0a = CheckAdminPorts(nm, lhosts0a)
-        t0b = CheckAdminPorts(nm, lhosts0b)
-        t1a = CheckAdminPorts(nm, lhosts1a)
-        t1b = CheckAdminPorts(nm, lhosts1b)
-        t0a.start()
-        t0b.start()
-        t1a.start()
-        t1b.start()
-        t0a.join()
-        t0b.join()
-        t1a.join()
-        t1b.join()
-    except Exception as error:
-        log_error(error)
+    if len(lhosts) < 4:
+        try:
+            CheckAdminPorts(nm, lhosts)
+        except Exception as error:
+            log_error(error)
+    else:
+        try:
+            lhosts0, lhosts1 = split_hosts(lhosts)
+            lhosts0a, lhosts0b = split_hosts(lhosts0)
+            lhosts1a, lhosts1b = split_hosts(lhosts1)
+            t0a = CheckAdminPorts(nm, lhosts0a)
+            t0b = CheckAdminPorts(nm, lhosts0b)
+            t1a = CheckAdminPorts(nm, lhosts1a)
+            t1b = CheckAdminPorts(nm, lhosts1b)
+            t0a.start()
+            t0b.start()
+            t1a.start()
+            t1b.start()
+            t0a.join()
+            t0b.join()
+            t1a.join()
+            t1b.join()
+        except Exception as error:
+            log_error(error)
+
 
 # Function tests hosts for default credentials on open 'admin' ports
 # splits the list of vulnerable hosts in two
@@ -427,24 +433,31 @@ def admin_scanner(nm):
 # now creates four threads.
 def run_thread():
     print "[*] Testing vulnerable host ip addresses..."
-    try:
-        vhosts0, vhosts1 = split_hosts(vhosts)
-        vhosts0a, vhosts0b = split_hosts(vhosts0)
-        vhosts1a, vhosts1b = split_hosts(vhosts1)
-        t0a = CheckVports(vhosts0a)
-        t0b = CheckVports(vhosts0b)
-        t1a = CheckVports(vhosts1a)
-        t1b = CheckVports(vhosts1b)
-        t0a.start()
-        t0b.start()
-        t1a.start()
-        t1b.start()
-        t0a.join()
-        t0b.join()
-        t1a.join()
-        t1b.join()
-    except Exception as error:
-        log_error(error)
+    if len(vhosts) < 4:
+        try:
+            CheckVports(vhosts)
+        except Exception as error:
+            log_error(error)
+    else:
+        try:
+            vhosts0, vhosts1 = split_hosts(vhosts)
+            vhosts0a, vhosts0b = split_hosts(vhosts0)
+            vhosts1a, vhosts1b = split_hosts(vhosts1)
+            t0a = CheckVports(vhosts0a)
+            t0b = CheckVports(vhosts0b)
+            t1a = CheckVports(vhosts1a)
+            t1b = CheckVports(vhosts1b)
+            t0a.start()
+            t0b.start()
+            t1a.start()
+            t1b.start()
+            t0a.join()
+            t0b.join()
+            t1a.join()
+            t1b.join()
+        except Exception as error:
+            log_error(error)
+
 
 # Function records all of the results from each instance of the class in to a csv report
 def rec_results(ofile, iL):
@@ -499,7 +512,6 @@ def main():
     parser.add_option('-s', dest='services', type='string', help='services to scan, all by default')
 
     (options, args) = parser.parse_args()
-
     ifile = options.ifile
     cidr = options.cidr
     ofile = options.ofile
@@ -535,7 +547,7 @@ def main():
             # TODO: add option to disable port scan and just test ports listed in file.
             admin_scanner(nm)  # checks for open admin ports
             run_thread()
-        except Exception as e:
+        except Exception as error:
             log_error(error)
         finally:
             if ofile is not None:
