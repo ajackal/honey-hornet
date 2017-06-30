@@ -28,7 +28,7 @@ def live_hosts(ifile):
     while file.open:
     line = read.lines()
     for line in lines:
-        sudo nmap -sn "live_hosts"
+        sudo nmap -sn "find_live_hosts"
         if host is live:
             a = VulnHost("live_host_ip_addr")
             lhosts.append("live_host_ip")  # maybe dont need
@@ -38,7 +38,7 @@ def live_hosts(ifile):
 def port_scan(a):
     ipadd = a.ipaddr
     sudo nmap -PN -p "commonAdminPorts" ipaddr
-#    for lhost in lhosts:
+#    for lhost in live_hosts:
 #        sudo nmap -PN -p "commonAdminPorts" "live_host"
         if commonAdminPort is open:
             a.vulnports.append(port)

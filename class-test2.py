@@ -37,33 +37,33 @@ def add_host():
         print '[+] port : %s added.' %port
 
 
-# adds one set of values to the list p_creds
+# adds one set of values to the list credentials
 def update_list():
     for vhost in vhosts:
         host = vhost.ip
         print "[*] testing connection on {0}...".format(host)
         try:
             newcreds = host + ";21;anon"
-            vhost.put_creds(newcreds)
+            vhost.put_credentials(newcreds)
             print "[+] update succeeded"
         except Exception as e:
             print "[!] udpate failed: {0}".format(e)
 
 
-# adds a second value to the same p_creds list
+# adds a second value to the same credentials list
 def update_list2():
     for vhost in vhosts:
         host = vhost.ip
         print "[*] testing connection on {0}...".format(host)
         try:
             newcreds = host + ";23;bob;password1"
-            vhost.put_creds(newcreds)
+            vhost.put_credentials(newcreds)
             print "[+] update succeeded"
         except Exception as e:
             print "[!] udpate failed: {0}".format(e)
 
 
-# prints the p_creds list to stdout and a file
+# prints the credentials list to stdout and a file
 def blah():
     for vhost in vhosts:
         vhost.get_results()  # returns nothing (init value)
@@ -71,7 +71,7 @@ def blah():
         # writes correct values to file
         # try inserting this to a class method??
         with open('new-test.txt', 'a') as f:
-            x = str(vhost.p_creds).strip('[]') + '\n'  # assigns p_creds to x, correctly
+            x = str(vhost.p_creds).strip('[]') + '\n'  # assigns credentials to x, correctly
             f.write(x)  # writes x to file, also correctly
 
 

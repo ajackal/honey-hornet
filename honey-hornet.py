@@ -12,13 +12,12 @@ import httplib
 import re
 
 
-totalhosts = []  # total number of hosts, for calculating percentages
-lhosts = []  # writes live hosts that are found here
-vhosts = []  # hosts that have open admin ports
+live_hosts = []  # writes live hosts that are found here
+vulnerable_hosts = []  # hosts that have open admin ports
 
 
-# define class for each vulnerable host
-class VulnHost(object):
+# defines a class for each live host with an open admin port
+class VulnerableHost(object):
     # defines hosts ip address
     # creates ports list
     # creates a credentials list
@@ -26,24 +25,24 @@ class VulnHost(object):
     # assigns itself the vulnerable IP
     def __init__(self, ipaddr):
         self.ports = []
-        self.p_creds = []
+        self.credentials = []
         self.banner = []
         self.ip = ipaddr
 
     # function adds open admin port to list
-    def add_vport(self, port):
+    def add_vulnerable_port(self, port):
         self.ports.append(port)
 
     # ports with default credentials
-    def put_creds(self, newcreds):
-        self.p_creds.append(newcreds)
+    def put_credentials(self, newcreds):
+        self.credentials.append(newcreds)
 
     # adds port, banner to banner list
     def put_banner(self, port, banner_txt, status, reason, headers):
         self.banner.append(':{0} {1} {2} {3}\n{4}\n'.format(port, status, reason, banner_txt, headers))
 
 
-# define a class to check for open ports
+# defines a class to thread the scanning for open ports
 class CheckAdminPorts(Thread):
 
     def __init__(self, nm, lhosts):
@@ -73,10 +72,10 @@ class CheckAdminPorts(Thread):
                 try:
                     sop = self.nm[lhost]['tcp'][port]['state']  # defines port state variable
                     if sop == 'open':  # checks to see if status is open
-                        if b not in vhosts:  # checks to see if host already has an object
-                            b = VulnHost(lhost)  # creates an object for that host if it doesn't exist
-                            vhosts.append(b)  # appends vulnerable host to list
-                        b.add_vport(port)
+                        if b not in vulnerable_hosts:  # checks to see if host already has an object
+                            b = VulnerableHost(lhost)  # creates an object for that host if it doesn't exist
+                            vulnerable_hosts.append(b)  # appends vulnerable host to list
+                        b.add_vulnerable_port(port)
                         print '[+] port : %s >> %s' % (colored(port, 'yellow'), colored(sop, 'green'))
                     else:
                         y += 1
@@ -86,9 +85,8 @@ class CheckAdminPorts(Thread):
                     print '[!] No open ports found.'
 
 
-# Checks to see which open admin ports each host has
-# Then runs the function to check default credentials
-class CheckVports(Thread):
+# defines a class to thread the test for default credentials
+class CheckVulnerablePorts(Thread):
 
     def __init__(self, vhosts):
         Thread.__init__(self)
@@ -144,8 +142,8 @@ class CheckVports(Thread):
                         newcreds = "host={0}, protocol=telnet, port={1}, user={2}, password={3}".format(host,
                                                                                                         port, user,
                                                                                                         passwords[x])
-                        vhost.put_creds(newcreds)
-                        print "[!] Success for Telnet! host: {0}, user: {1}, password: {2}".format(host,
+                        vhost.put_credentials(newcreds)
+                        print "[!] Success for Telnet! host={0}, user={1}, password={2}".format(host,
                                                                                                    colored(user,
                                                                                                            'yellow'),
                                                                                                    colored(passwords[x],
@@ -178,8 +176,8 @@ class CheckVports(Thread):
             f.quit()
             fw = f.getwelcome()
             print "[+] Anonymous FTP connection {0} on {1}.".format(colored("successful", "green"), host)
-            newcreds = host + ',ftp,21,anon,,' + fw
-            vhost.put_creds(newcreds)
+            newcreds = "host={0}, protocol=ftp, port=21, user=anon, ,{1}".format(host, fw)
+            vhost.put_credentials(newcreds)
             print "[+] FTP server responded with {0}".format(fw)
         except Exception as error:
             log_error(error)
@@ -191,12 +189,13 @@ class CheckVports(Thread):
                     fc = f.connect(host, 21, 1)
                     if fc is True:
                         fw = f.getwelcome()
-                        print "[*] FTP server returned %s", fw
+                        print "[*] FTP server returned {0}".format(fw)
                         f.login(user, passwords[x])
                         f.close()
-                        newcreds = host + ",ftp,21," + user + ',' + passwords[x] + ',' + fw
-                        vhost.put_creds(newcreds)
-                        print "[!] Success for FTP! user: {0}, password: {1}".format(colored(user, 'yellow'),
+                        newcreds = "host={0}, protocol=ftp, port=21, user={1}, password={2}, welcome={3}".format(
+                            host, user, passwords[x], fw)
+                        vhost.put_credentials(newcreds)
+                        print "[!] Success for FTP! user={0}, password={1}".format(colored(user, 'yellow'),
                                                                                      colored(passwords[x], 'green'))
                     break
                 except Exception as error:
@@ -216,10 +215,11 @@ class CheckVports(Thread):
                     try:
                         s = pxssh.pxssh()
                         s.login(host, user, password)
-                        print "[!] Success for SSH! user: {0}, password: {1}".format(colored(user, 'yellow'),
-                                                                                     colored(password, 'green'))
-                        newcreds = host + ',ssh,22,' + user + ',' + password
-                        vhost.put_creds(newcreds)
+                        print "[!] Success for SSH! user={0}, password={1}".format(colored(user, 'yellow'),
+                                                                                   colored(password, 'green'))
+                        newcreds = "host={0}, protocol=ssh, port=22, user={1}, password={2}".format(host, user,
+                                                                                                    password)
+                        vhost.put_credentials(newcreds)
                         s.logout()
                         s.close()
                     except Exception as error:
@@ -275,20 +275,20 @@ class CheckVports(Thread):
                 xml = f.read()
                 return xml
 
-        def rec_error(host, port, method, e):
-            print "[*] Recording error:"
-            event = "[*] Error raised: host={0},port={1},method={2},error={3}\n".format(host, port, method, e)
-            print event
-            with open("error.log", 'a') as f:
-                f.write(event)
-
         def log_results(host, port, password, method):
             print "[*] Recording successful attempt:"
-            event = "[*] Password recovered: host={0},port={1},password={2},method={3}\n".format(host, port,
-                                                                                                 password,
-                                                                                                 method)
+            event = "[*] Password recovered: host={0}, port={1}, password={2}, method={3}\n".format(host, port,
+                                                                                                    password,
+                                                                                                    method)
             print event
             with open("recovered_passwords.log", 'a') as f:
+                f.write(event)
+
+        def rec_error(host, port, method, e):
+            print "[*] Recording error:"
+            event = "[*] Error raised: host={0}, port={1}, method={2}, error={3}\n".format(host, port, method, e)
+            print event
+            with open("error.log", 'a') as f:
                 f.write(event)
 
         # def post_credentials(host, http_port):
@@ -332,10 +332,10 @@ class CheckVports(Thread):
 
 # Function parses either the default files or user input files
 # into the appropriate lists to run the program
-def inputs(ufile, pfile, ports):
+def inputs(user_file, password_file, ports):
     # TODO: have ports file read to dictionary, key=port, value=protocol
 
-    input_list = [ufile, pfile, ports]
+    input_list = [user_file, password_file, ports]
 
     global users
     global passwords
@@ -344,9 +344,9 @@ def inputs(ufile, pfile, ports):
     for x in input_list:
         if x is not None:
             with open(x, 'r') as f:
-                if x is ufile:
+                if x is user_file:
                     users = f.read().splitlines()
-                elif x is pfile:
+                elif x is password_file:
                     passwords = f.read().splitlines()
                 elif x is ports:
                     commonAdminPorts = [int(x) for x in f.read().split()]
@@ -360,9 +360,9 @@ def inputs(ufile, pfile, ports):
 
 
 # Function scans the list or CIDR block to see which hosts are alive
-# writes the live hosts to the 'lhosts' list
+# writes the live hosts to the 'live_hosts' list
 # also calculates the percentage of how many hosts are alive
-def live_hosts(nm, addrs, iL):
+def find_live_hosts(nm, addrs, iL):
     print "[*] scanning for live hosts..."
     try:
         if iL is False:
@@ -376,10 +376,10 @@ def live_hosts(nm, addrs, iL):
         # prints the hosts that are alive
         for host, status in hosts_list:
             print('[+] {0} is {1}'.format(colored(host, 'yellow'), colored(status, 'green')))
-            lhosts.append(host)  # adds live hosts to list to scan for open admin ports
+            live_hosts.append(host)  # adds live hosts to list to scan for open admin ports
         if iL is True:
             global live
-            live = len(lhosts)
+            live = len(live_hosts)
             global percentage
             percentage = 100 * (float(live) / float(total))
             print "[+] {0} out of {1} hosts are alive or {2}%".format(live, total, percentage)
@@ -394,20 +394,20 @@ def split_hosts(hosts):
     return hosts[:half], hosts[half:]
 
 
-# Function scans for common admin ports that might be open
-# splits live hosts lists in two
-# creates two threads, one for each new list
-# this speeds up scanning by 50%
+# Function scans for common admin ports that might be open;
+# splits live hosts lists in to multiple lists, generates one threads for each new list
+# this speeds up scanning dramatically
 def admin_scanner(nm):
     print "[*] scanning for open admin ports..."
-    if len(lhosts) < 4:
+    if len(live_hosts) < 4:
         try:
-            CheckAdminPorts(nm, lhosts)
+            CheckAdminPorts(nm, live_hosts)
         except Exception as error:
             log_error(error)
     else:
         try:
-            lhosts0, lhosts1 = split_hosts(lhosts)
+            # TODO: change to run multiple threads, test for number, 10, 20?
+            lhosts0, lhosts1 = split_hosts(live_hosts)
             lhosts0a, lhosts0b = split_hosts(lhosts0)
             lhosts1a, lhosts1b = split_hosts(lhosts1)
             t0a = CheckAdminPorts(nm, lhosts0a)
@@ -433,20 +433,21 @@ def admin_scanner(nm):
 # now creates four threads.
 def run_thread():
     print "[*] Testing vulnerable host ip addresses..."
-    if len(vhosts) < 4:
+    if len(vulnerable_hosts) < 4:
         try:
-            CheckVports(vhosts)
+            CheckVulnerablePorts(vulnerable_hosts)
         except Exception as error:
             log_error(error)
     else:
         try:
-            vhosts0, vhosts1 = split_hosts(vhosts)
+            # TODO: change to run multiple threads, test for number, 10, 20?
+            vhosts0, vhosts1 = split_hosts(vulnerable_hosts)
             vhosts0a, vhosts0b = split_hosts(vhosts0)
             vhosts1a, vhosts1b = split_hosts(vhosts1)
-            t0a = CheckVports(vhosts0a)
-            t0b = CheckVports(vhosts0b)
-            t1a = CheckVports(vhosts1a)
-            t1b = CheckVports(vhosts1b)
+            t0a = CheckVulnerablePorts(vhosts0a)
+            t0b = CheckVulnerablePorts(vhosts0b)
+            t1a = CheckVulnerablePorts(vhosts1a)
+            t1b = CheckVulnerablePorts(vhosts1b)
             t0a.start()
             t0b.start()
             t1a.start()
@@ -459,42 +460,42 @@ def run_thread():
             log_error(error)
 
 
-# Function records all of the results from each instance of the class in to a csv report
-def rec_results(ofile, iL):
+# Function records all of the results from each instance of the class in to a ?csv? report
+# TODO: replace this function, have the class write to file as results are found, better if it crashes
+def rec_results(output_file, iL):
     print '[*] recording results...'
-    with open(ofile, 'a+') as f:
+    with open(output_file, 'a+') as f:
         if iL is True:
-            stats = 'live,total\n{0},{1}\n'.format(live, total)
+            stats = 'live={0},total={1}\n'.format(live, total)
             f.write(stats)
-        headers_ports = 'host,port,status,header\n'
-        f.write(headers_ports)
-        for vhost in vhosts:
+        for vhost in vulnerable_hosts:
             for port in vhost.ports:
                 for x in vhost.banner:
                     if str(port) in x:
-                        y = str(vhost.ip) + ',' + str(port) + ",open,yes\n"
+                        y = "host={0}, port={1}, status=open, header=yes\n".format(str(vhost.ip), str(port))
                         f.write(y)
                     else:
-                        y = str(vhost.ip) + ',' + str(port) + ",open,no\n"
+                        y = "host={0}, port={1}, status=open, header=no\n".format(str(vhost.ip), str(port))
                         f.write(y)
         headers_creds = 'host,protocol,port,user,password,misc\n'
         f.write(headers_creds)
-        for vhost in vhosts:
-            # print vhost.p_creds  # returns correct values
-            x = str(vhost.p_creds).strip("['']") + '\n'  # assigns p_creds to x, correctly
+        for vhost in vulnerable_hosts:
+            # print vhost.credentials  # returns correct values
+            x = str(vhost.p_creds).strip("['']") + '\n'  # assigns credentials to x, correctly
             f.write(x)  # writes x to file, also correctly
-            bfile = 'banners_' + ofile
+            bfile = 'banners_' + output_file
             with open(bfile, 'a+') as b:
                 for x in vhost.banner:
                     y = str(vhost.ip) + ' ' + str(x)
                     b.write(y)
 
 
+# Logs any Exception or error that is thrown by the program.
 def log_error(error):
     time_now = datetime.now()
-    log_error = str(time_now) + ":" + str(error) + "\n"
+    log_error_message = str(time_now) + ":" + str(error) + "\n"
     with open('error.log', 'a') as f:
-        f.write(log_error)
+        f.write(log_error_message)
         print "[*] Error logged: {0}".format(error)
 
 
@@ -519,8 +520,10 @@ def main():
     pfile = options.pfile
     ports = options.ports
 
+    # Reads users, passwords, and ports files to generate lists to test.
     inputs(ufile, pfile, ports)
 
+    # Validates the input options.
     if ifile is not None and cidr is not None:
         print "[!] Cannot have two input options!"
         print parser.usage
@@ -532,27 +535,29 @@ def main():
     else:
         print "[*] initializing port scanner..."
         nm = nmap.PortScanner()  # defines port scanner function to pass to each function
-        if ifile is not None:
+        if ifile is not None:  # checks if input is a file
             addrs = ifile
-            iL = True
+            iL = True  # iL is the switch for NMAP to read from file
+            # Calculates total hosts to generate statistics
             with open(addrs, 'r') as f:
-                totalhosts = f.readlines()
+                total_hosts = f.readlines()
                 global total
-                total = len(totalhosts)
+                total = len(total_hosts)
         else:
             addrs = cidr
             iL = False
         try:
-            live_hosts(nm, addrs, iL)  # checks for live hosts
+            find_live_hosts(nm, addrs, iL)  # Uses NMAP ping scan to check for live hosts
             # TODO: add option to disable port scan and just test ports listed in file.
-            admin_scanner(nm)  # checks for open admin ports
-            run_thread()
+            admin_scanner(nm)  # Checks for open admin ports, defined in file.
+            run_thread()  # Starts the threads to check the open ports for default credentials.
         except Exception as error:
             log_error(error)
         finally:
+            # Writes to file if the output switch is given.
             if ofile is not None:
                 rec_results(ofile, iL)
-            print datetime.now() - start_time
+            print datetime.now() - start_time  # Calculates run time for the program.
 
 
 if __name__ == "__main__":

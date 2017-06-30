@@ -53,7 +53,7 @@ def live_hosts(nm, addrs, iL):
 # So I rewrote it to the function below this one.
 #
 # print "[*] scanning for open admin ports..."
-# for lhost in lhosts:
+# for lhost in live_hosts:
 #     x = 0
 #     while x < len(commonAdminPorts):
 #         print "[*] checking {0} for open port on {1}...".format(lhost, commonAdminPorts[x])
@@ -138,7 +138,7 @@ def check_telnet(vhost):
                     po = t.read_all()
                     if "logout" in po:
                         newcreds = host + ";telnet;23;" + user + ';' + passwords[x]
-                        vhost.put_creds(newcreds)
+                        vhost.put_credentials(newcreds)
                         print "[!] Success for TELNET! host: {0}, user: {1}, password: {2}".format(host,
                                                         colored(user, 'yellow'), colored(passwords[x], 'green'))
                         break
@@ -166,7 +166,7 @@ def check_ftp(vhost):
         fw = f.getwelcome()
         print "[+] Anonymous FTP connection {0} on {1}.".format(colored("successful", "green"), host)
         newcreds = host + ';ftp;21;anon' + fw
-        vhost.put_creds(newcreds)
+        vhost.put_credentials(newcreds)
         print "[+] FTP server responded with {0}".format(fw)
     except Exception as e:
         print "[!] Anonymous FTP login failed: {0}".format(e)
@@ -183,7 +183,7 @@ def check_ftp(vhost):
                     f.login(user, passwords[x])
                     f.close()
                     newcreds = host + ";ftp;21;" + user + ';' + passwords[x] + ';' + fw
-                    vhost.put_creds(newcreds)
+                    vhost.put_credentials(newcreds)
                     print "[!] Success for FTP! user: {0}, password: {1}".format(colored(user, 'yellow'),
                                                                                  colored(passwords[x], 'green'))
                 break
@@ -219,7 +219,7 @@ def check_ssh(vhost):
         finally:
             if found is True:
                 newcreds = host + ';ssh;22;' + user + ';' + password
-                vhost.put_creds(newcreds)
+                vhost.put_credentials(newcreds)
             connection_lock.release()
             # add something here to close openSSH prompt
 
@@ -238,8 +238,8 @@ def rec_results(ofile):
     print '[*] recording results...'
     for vhost in vhosts:
         with open(ofile, 'a+') as f:
-            # print vhost.p_creds  # returns correct values
-            x = str(vhost.p_creds).strip('[]') + '\n' # assigns p_creds to x, correctly
+            # print vhost.credentials  # returns correct values
+            x = str(vhost.p_creds).strip('[]') + '\n' # assigns credentials to x, correctly
             f.write(x)  # writes x to file, also correctly
 
 
