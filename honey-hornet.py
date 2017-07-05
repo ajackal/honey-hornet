@@ -126,11 +126,12 @@ def check_telnet(vulnerable_host):
                 po = t.read_all()
                 print po
                 if "successfully" in po:
-                    newcreds = "host={0}, protocol=telnet, port={1}, user={2}, password={3}".format(host,
-                                                                                                    port, user,
-                                                                                                    passwords[x])
-                    vulnerable_host.put_credentials(newcreds)
-                    print "[!] Success for Telnet! {0}".format(newcreds)
+                    # newcreds = "host={0}, port={1}, user={2}, password={3}, protocol=telnet".format(host,
+                    #                                                                                 port, user,
+                    #                                                                                 passwords[x])
+                    # vulnerable_host.put_credentials(newcreds)
+                    protocol = "telnet"
+                    log_results(host, port, user, passwords[x], protocol)
                     t.write("quit\n")
                     break
                 else:
@@ -156,9 +157,14 @@ def check_ftp(vulnerable_host):
         f.login()
         f.quit()
         fw = f.getwelcome()
-        print "[+] Anonymous FTP connection {0} on {1}.".format(colored("successful", "green"), host)
-        newcreds = "host={0}, protocol=ftp, port=21, user=anon, ,{1}".format(host, fw)
-        vulnerable_host.put_credentials(newcreds)
+        # print "[+] Anonymous FTP connection {0} on {1}.".format(colored("successful", "green"), host)
+        # newcreds = "host={0}, protocol=ftp, port=21, user=anon, ,{1}".format(host, fw)
+        # vulnerable_host.put_credentials(newcreds)
+        port = "21"
+        user = "Anonymous"
+        password = "none"
+        protocol = "FTP"
+        log_results(host, port, user, password, protocol)
         print "[+] FTP server responded with {0}".format(fw)
         for user in users:
             x = 0
@@ -171,10 +177,12 @@ def check_ftp(vulnerable_host):
                         print "[*] FTP server returned {0}".format(fw)
                         f.login(user, passwords[x])
                         f.close()
-                        newcreds = "host={0}, protocol=ftp, port=21, user={1}, password={2}, welcome={3}".format(
-                            host, user, passwords[x], fw)
-                        vulnerable_host.put_credentials(newcreds)
-                        print "[!] Success for FTP! {0}".format(newcreds)
+                        # newcreds = "host={0}, protocol=ftp, port=21, user={1}, password={2}, welcome={3}".format(
+                        #     host, user, passwords[x], fw)
+                        # vulnerable_host.put_credentials(newcreds)
+                        port = "21"
+                        protocol = "FTP"
+                        log_results(host, port, user, passwords[x], protocol)
                     break
                 except Exception as error:
                     log_error(error)
@@ -198,11 +206,14 @@ def check_ssh(vulnerable_host):
                     try:
                         s = pxssh.pxssh()
                         s.login(host, user, password)
-                        print "[!] Success for SSH! user={0}, password={1}".format(colored(user, 'yellow'),
-                                                                                   colored(password, 'green'))
-                        newcreds = "host={0}, protocol=ssh, port=22, user={1}, password={2}".format(host, user,
-                                                                                                    password)
-                        vulnerable_host.put_credentials(newcreds)
+                        # print "[!] Success for SSH! user={0}, password={1}".format(colored(user, 'yellow'),
+                        #                                                            colored(password, 'green'))
+                        # newcreds = "host={0}, protocol=ssh, port=22, user={1}, password={2}".format(host, user,
+                        #                                                                             password)
+                        # vulnerable_host.put_credentials(newcreds)
+                        port = "22"
+                        protocol = "SSH"
+                        log_results(host, port, user, password, protocol)
                         s.logout()
                         s.close()
                     except Exception as error:
@@ -266,10 +277,10 @@ def http_post_credential_check(vulnerable_host, http_port):
             xml = f.read()
             return xml
 
-    def log_results(host, port, password, method):
+    def log_results(host, port, user, password, protocol):
         time_now = str(datetime.now())
         print "[*] Recording successful attempt:"
-        event = " host={0}, port={1}, password={2}, method={3}\n".format(host, port, password, method)
+        event = " host={0}, port={1}, user={2}, password={3}, method={4}\n".format(host, port, user, password, protocol)
         print "[*] Password recovered:{0}".format(event)
         with open("recovered_passwords.log", 'a') as f:
             f.write(time_now)
@@ -473,6 +484,16 @@ def log_open_port(host, port, status):
     print "[*] Open port found:{0}".format(event)
     with open("open_ports.log", 'a') as f:
         f.write(str(time_now))
+        f.write(event)
+
+
+def log_results(host, port, user, password, protocol):
+    time_now = str(datetime.now())
+    print "[*] Recording successful attempt:"
+    event = " host={0}, port={1}, user={2}, password={3}, protocol={4}\n".format(host, port, user, password, protocol)
+    print "[*] Password recovered:{0}".format(event)
+    with open("recovered_passwords.log", 'a') as f:
+        f.write(time_now)
         f.write(event)
 
 
