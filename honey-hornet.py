@@ -76,7 +76,7 @@ def check_admin_ports(live_host, common_admin_ports):
                 log_open_port(host, port, sop)
             else:
                 y += 1
-            if y == len(port):
+            if y == len(common_admin_ports):
                 print '[!] No open ports found.'
     except Exception as error:
         log_error(error)
@@ -308,7 +308,7 @@ def http_post_credential_check(vulnerable_host, http_port):
             password = get_pass_from_xml()
             log_results(host, http_port, password, method)
         else:
-            m = re.findall("message='(?P<error>\w\s/\s\w)'", str(data))
+            m = re.findall("message='(?P<error>\w+\s\w+\s\/\s\w+)'", str(data))
             if m:
                 error = m[0]
                 print "[*] Server returned: {0}".format(error)
@@ -316,7 +316,7 @@ def http_post_credential_check(vulnerable_host, http_port):
                 print "[*] Server returned: {0}".format(data)
         conn.close()
     except Exception as e:
-        m = re.findall("message='(?P<error>\w\s/\s\w)'", str(e))
+        m = re.findall("message='(?P<error>.*)'", str(e))
         if m:
             error = m[0]
             rec_error(host, http_port, method, error)
@@ -368,8 +368,9 @@ def inputs(user_file, password_file, ports):
 # Function scans the list or CIDR block to see which hosts are alive
 # writes the live hosts to the 'live_hosts' list
 # also calculates the percentage of how many hosts are alive
-def find_live_hosts(nm, addrs, iL):
+def find_live_hosts(addrs, iL):
     print "[*] scanning for live hosts..."
+    nm = nmap.PortScanner()
     try:
         if iL is False:
             nm.scan(hosts=addrs, arguments='-sn')  # ping scan to check for live hosts
@@ -480,8 +481,8 @@ def rec_results(output_file, iL):
 
 def log_open_port(host, port, status):
     time_now = datetime.now()
-    event = " host={0}, port={1}, status={2}\n".format(host, port, status)
-    print "[*] Open port found:{0}".format(event)
+    event = " host={0}, port={1}, status={2}\n".format(host, port, colored(status, 'green'))
+    print colored("[*]", 'green') + " Open port found:{0}".format(event)
     with open("open_ports.log", 'a') as f:
         f.write(str(time_now))
         f.write(event)
@@ -552,7 +553,7 @@ def main():
             addrs = cidr
             iL = False
         try:
-            find_live_hosts(nm, addrs, iL)  # Uses NMAP ping scan to check for live hosts
+            find_live_hosts(addrs, iL)  # Uses NMAP ping scan to check for live hosts
             # TODO: add option to disable port scan and just test ports listed in file.
             run_admin_scanner()  # Checks for open admin ports, defined in file.
             run_thread()  # Starts the threads to check the open ports for default credentials.
