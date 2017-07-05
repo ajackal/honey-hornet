@@ -3,7 +3,7 @@ import sxssh
 
 
 lhosts = []  # maybe dont need
-commonAdminPorts = [21, 22, 23, etc.]
+common_admin_ports = [21, 22, 23, etc.]
 
 
 class VulnHost:
@@ -37,9 +37,9 @@ def live_hosts(ifile):
 
 def port_scan(a):
     ipadd = a.ipaddr
-    sudo nmap -PN -p "commonAdminPorts" ipaddr
+    sudo nmap -PN -p "common_admin_ports" ipaddr
 #    for lhost in live_hosts:
-#        sudo nmap -PN -p "commonAdminPorts" "live_host"
+#        sudo nmap -PN -p "common_admin_ports" "live_host"
         if commonAdminPort is open:
             a.vulnports.append(port)
 

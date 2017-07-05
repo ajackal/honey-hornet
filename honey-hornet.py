@@ -6,11 +6,15 @@ import telnetlib
 from ftplib import FTP
 from pexpect import pxssh
 import optparse
-from threading import Thread
+import threading
+from threading import *
 from datetime import datetime
 import httplib
 import re
 
+
+max_connections = 10
+connection_lock = BoundedSemaphore(value=max_connections)
 
 live_hosts = []  # writes live hosts that are found here
 vulnerable_hosts = []  # hosts that have open admin ports
@@ -43,139 +47,119 @@ class VulnerableHost(object):
 
 
 # defines a class to thread the scanning for open ports
-class CheckAdminPorts(Thread):
-
-    def __init__(self, nm, lhosts):
-        # starts the Thread
-        # assigns the list of live hosts
-        # assigns NMAP
-        Thread.__init__(self)
-        self.lhosts = lhosts
-        self.nm = nm
-
+def check_admin_ports(live_host, common_admin_ports):
     # Function runs automatically after the class is instantiated
     # Tests all live host for open 'admin' ports
     # if an open port is found, it instantiates a class for that host
     # and records all the open or filtered ports
-    def run(self):
+    try:
+        connection_lock.acquire()
+        host = live_host
+        print "[*] initializing port scanner..."
+        nm = nmap.PortScanner()  # defines port scanner function to pass to each function
         print "[*] scanning for open admin ports..."
-        x = 0
-        for lhost in self.lhosts:
-            x += 1
-            b = 'a' + str(x)  # unique class identifier
-            print "[*] checking {0} for open admin ports...".format(lhost)
-            self.nm.scan(lhost, str(commonAdminPorts))  # nmap scan command
-            lport = self.nm[lhost]['tcp'].keys()  # retrieves tcp port results from scan
-            lport.sort()  # sorts ports
-            y = 0
-            for port in lport:
-                try:
-                    sop = self.nm[lhost]['tcp'][port]['state']  # defines port state variable
-                    if sop == 'open':  # checks to see if status is open
-                        if b not in vulnerable_hosts:  # checks to see if host already has an object
-                            b = VulnerableHost(lhost)  # creates an object for that host if it doesn't exist
-                            vulnerable_hosts.append(b)  # appends vulnerable host to list
-                        b.add_vulnerable_port(port)
-                        # print '[+] port : %s >> %s' % (colored(port, 'yellow'), colored(sop, 'green'))
-                        log_open_port(lhost, port, sop)
-                    else:
-                        y += 1
-                except Exception as error:
-                    log_error(error)
-                if y == len(lport):
-                    print '[!] No open ports found.'
+        x = len(vulnerable_hosts) + 1
+        b = 'a' + str(x)  # unique class identifier
+        print "[*] checking {0} for open admin ports...".format(host)
+        nm.scan(host, str(common_admin_ports))  # nmap scan command
+        port = nm[host]['tcp'].keys()  # retrieves tcp port results from scan
+        port.sort()  # sorts ports
+        y = 0
+        for port in port:
+            sop = nm[host]['tcp'][port]['state']  # defines port state variable
+            if sop == 'open':  # checks to see if status is open
+                if b not in vulnerable_hosts:  # checks to see if host already has an object
+                    b = VulnerableHost(host)  # creates an object for that host if it doesn't exist
+                    vulnerable_hosts.append(b)  # appends vulnerable host to list
+                b.add_vulnerable_port(port)
+                # print '[+] port : %s >> %s' % (colored(port, 'yellow'), colored(sop, 'green'))
+                log_open_port(host, port, sop)
+            else:
+                y += 1
+            if y == len(port):
+                print '[!] No open ports found.'
+    except Exception as error:
+        log_error(error)
+    finally:
+        connection_lock.release()
 
 
-# defines a class to thread the test for default credentials
-class CheckVulnerablePorts(Thread):
+# Function runs automatically after the class is instantiated
+# Checks to see what vulnerable ports is open for each host
+# Then runs the appropriate function to test credentials
+# def run(self):
+#     for vhost in self.vhosts:
+#         print '[*] checking >> {0}'.format(vhost.ip)
+#         if 21 in vhost.ports:
+#             self.check_ftp(vhost)
+#         if 22 in vhost.ports:
+#             self.check_ssh(vhost)
+#         telnet_ports = [23, 2332]
+#         for telnet_port in telnet_ports:
+#             if telnet_port in vhost.ports:
+#                 self.check_telnet(vhost)
+#         http_ports = [8000, 8080, 8081, 8090, 9191, 9443]
+#         for http_port in http_ports:
+#             if http_port in vhost.ports:
+#                 self.http_post_credential_check(vhost, http_port)
 
-    def __init__(self, vhosts):
-        Thread.__init__(self)
-        self.vhosts = vhosts
-
-    # Function runs automatically after the class is instantiated
-    # Checks to see what vulnerable ports is open for each host
-    # Then runs the appropriate function to test credentials
-    def run(self):
-        for vhost in self.vhosts:
-            print '[*] checking >> {0}'.format(vhost.ip)
-            if 21 in vhost.ports:
-                self.check_ftp(vhost)
-            if 22 in vhost.ports:
-                self.check_ssh(vhost)
-            telnet_ports = [23, 2332]
-            for telnet_port in telnet_ports:
-                if telnet_port in vhost.ports:
-                    self.check_telnet(vhost)
-            http_ports = [8000, 8080, 8081, 8090, 9191, 9443]
-            for http_port in http_ports:
-                if http_port in vhost.ports:
-                    self.http_post_credential_check(vhost, http_port)
-
-    # Tries to connect via Telnet with common credentials
-    # Then it prints the results of the connection attempt
-    def check_telnet(self, vhost):
-        host = vhost.ip
+# Tries to connect via Telnet with common credentials
+# Then it prints the results of the connection attempt
+def check_telnet(vulnerable_host):
+    try:
+        connection_lock.acquire()
+        host = vulnerable_host.ip
         print "[*] Testing Telnet connection on {0}...".format(host)
-        if 2332 in vhost.ports:
+        if 2332 in vulnerable_host.ports:
             port = 2332
         else:
             port = 23
         for user in users:
             x = 0
             while x < len(passwords):
-                try:  # open telnet connection(ipaddr, port, timeout)
-                    t = telnetlib.Telnet(host, port, 15)
-                    t.read_until("ogin: ")
-                    t.write(user + "\n")
-                    t.read_until("assword: ")
-                    t.write(passwords[x] + "\n")
-                    # t.read_until("OK")
-                    po = t.read_all()
-                    print po
-                    if "succefully" in po:
-                        newcreds = "host={0}, protocol=telnet, port={1}, user={2}, password={3}".format(host,
-                                                                                                        port, user,
-                                                                                                        passwords[x])
-                        vhost.put_credentials(newcreds)
-                        print "[!] Success for Telnet! host={0}, user={1}, password={2}".format(host,
-                                                                                                   colored(user,
-                                                                                                           'yellow'),
-                                                                                                   colored(passwords[x],
-                                                                                                           'green'))
-                        t.write("quit\n")
-                        break
-                    else:
-                        x += 1
-                        break
-                except Exception as error:
-                    if "Connection refused" in error:
-                        log_error(error)
-                        break
-                    else:
-                        log_error(error)
-                        x += 1
-                        if x == len(passwords) - 1:
-                            print "[!] Password not found."
-                            # print "[!] ", e  # prints thrown exception, for debug
-                            # TODO: fix looping issue, password found, continues to test passwords
+                t = telnetlib.Telnet(host, port, 15)
+                t.read_until("ogin: ")
+                t.write(user + "\n")
+                t.read_until("assword: ")
+                t.write(passwords[x] + "\n")
+                # t.read_until("OK")
+                po = t.read_all()
+                print po
+                if "successfully" in po:
+                    newcreds = "host={0}, protocol=telnet, port={1}, user={2}, password={3}".format(host,
+                                                                                                    port, user,
+                                                                                                    passwords[x])
+                    vulnerable_host.put_credentials(newcreds)
+                    print "[!] Success for Telnet! {0}".format(newcreds)
+                    t.write("quit\n")
+                    break
+                else:
+                    x += 1
+                    if x == len(passwords) - 1:
+                        print "[!] Password not found."
+                        # print "[!] ", e  # prints thrown exception, for debug
+                        # TODO: fix looping issue, password found, continues to test passwords
+    except Exception as error:
+        log_error(error)
+    finally:
+        connection_lock.release()
 
-    # Function checks the FTP service for all users and passwords given
-    # also tests for anonymous log-ins and does an FTP banner grab
-    def check_ftp(self, vhost):
-        host = vhost.ip
+
+# Function checks the FTP service for all users and passwords given
+# also tests for anonymous log-ins and does an FTP banner grab
+def check_ftp(vulnerable_host):
+    try:
+        connection_lock.acquire()
+        host = vulnerable_host.ip
         print "[*] Testing FTP connection on {0}...".format(host)
-        try:
-            f = FTP(host)
-            f.login()
-            f.quit()
-            fw = f.getwelcome()
-            print "[+] Anonymous FTP connection {0} on {1}.".format(colored("successful", "green"), host)
-            newcreds = "host={0}, protocol=ftp, port=21, user=anon, ,{1}".format(host, fw)
-            vhost.put_credentials(newcreds)
-            print "[+] FTP server responded with {0}".format(fw)
-        except Exception as error:
-            log_error(error)
+        f = FTP(host)
+        f.login()
+        f.quit()
+        fw = f.getwelcome()
+        print "[+] Anonymous FTP connection {0} on {1}.".format(colored("successful", "green"), host)
+        newcreds = "host={0}, protocol=ftp, port=21, user=anon, ,{1}".format(host, fw)
+        vulnerable_host.put_credentials(newcreds)
+        print "[+] FTP server responded with {0}".format(fw)
         for user in users:
             x = 0
             while x < len(passwords):
@@ -189,22 +173,27 @@ class CheckVulnerablePorts(Thread):
                         f.close()
                         newcreds = "host={0}, protocol=ftp, port=21, user={1}, password={2}, welcome={3}".format(
                             host, user, passwords[x], fw)
-                        vhost.put_credentials(newcreds)
-                        print "[!] Success for FTP! user={0}, password={1}".format(colored(user, 'yellow'),
-                                                                                     colored(passwords[x], 'green'))
+                        vulnerable_host.put_credentials(newcreds)
+                        print "[!] Success for FTP! {0}".format(newcreds)
                     break
                 except Exception as error:
                     log_error(error)
                     x += 1
                     if x == len(passwords):
                         print "[!] Password not found."
+    except Exception as error:
+        log_error(error)
+    finally:
+        connection_lock.release()
 
-    # Function tests the SSH service with all of the users and passwords given
-    def check_ssh(self, vhost):
-        host = vhost.ip
+
+# Function tests the SSH service with all of the users and passwords given
+def check_ssh(vulnerable_host):
+    try:
+        connection_lock.acquire()
+        host = vulnerable_host.ip
         print "[*] Testing SSH service on {0}...".format(host)
         for user in users:
-            try:
                 for password in passwords:
                     try:
                         s = pxssh.pxssh()
@@ -213,117 +202,127 @@ class CheckVulnerablePorts(Thread):
                                                                                    colored(password, 'green'))
                         newcreds = "host={0}, protocol=ssh, port=22, user={1}, password={2}".format(host, user,
                                                                                                     password)
-                        vhost.put_credentials(newcreds)
+                        vulnerable_host.put_credentials(newcreds)
                         s.logout()
                         s.close()
                     except Exception as error:
                         log_error(error)
                         pass
                         # add something here to close openSSH prompt (only occurs when using PyCharm on Linux)
-            except Exception as error:
-                log_error(error)
+    except Exception as error:
+        log_error(error)
+    finally:
+        connection_lock.release()
 
-    # simple banner grab with httplib
-    def banner_grab(self, vhost, http_port):
-        host = vhost.ip
+
+# simple banner grab with httplib
+def banner_grab(vulnerable_host, http_port):
+    try:
+        connection_lock.acquire()
+        host = vulnerable_host.ip
         print "[*] Grabbing banner from {0}".format(host)
-        try:
-            conn = httplib.HTTPConnection(host, http_port)
-            conn.request("GET", "/")
-            r1 = conn.getresponse()
-            banner_txt = r1.read(1000)
-            headers = r1.getheaders()
-            print r1.status, r1.reason
-            # puts banner into the class instance of the host
-            vhost.put_banner(http_port, banner_txt, r1.status, r1.reason, headers)
-        except Exception as error:
-            log_error(error)
+        conn = httplib.HTTPConnection(host, http_port)
+        conn.request("GET", "/")
+        r1 = conn.getresponse()
+        banner_txt = r1.read(1000)
+        headers = r1.getheaders()
+        print r1.status, r1.reason
+        # puts banner into the class instance of the host
+        vulnerable_host.put_banner(http_port, banner_txt, r1.status, r1.reason, headers)
+    except Exception as error:
+        log_error(error)
+    finally:
+        connection_lock.release()
 
-    def http_post_credential_check(self, vhost, http_port):
-        host = vhost.ip
-        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0",
-                   "Content-Type": "text/xml","Accept": "application/xml, text/xml, */*; q=0.01",
-                   "Accept-Language": "en-US,en;q=0.5", "X-Requested-With": "XMLHttpRequest", "Connection": "close"}
 
-        # body_public = '/xml/GetPublic.xml'
-        body_connect = '/xml/Connect.xml'
+def http_post_credential_check(vulnerable_host, http_port):
+    connection_lock.acquire()
+    host = vulnerable_host.ip
+    headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0",
+               "Content-Type": "text/xml","Accept": "application/xml, text/xml, */*; q=0.01",
+               "Accept-Language": "en-US,en;q=0.5", "X-Requested-With": "XMLHttpRequest", "Connection": "close"}
 
-        # xml_public = "xml/Public.xml"
-        xml_connect = "xml/Connect.xml"
+    # body_public = '/xml/GetPublic.xml'
+    body_connect = '/xml/Connect.xml'
 
-        method = "HTTP-POST"
+    # xml_public = "xml/Public.xml"
+    xml_connect = "xml/Connect.xml"
 
-        def get_pass_from_xml():
-            with open(xml_connect) as f:
-                x = f.read()
-                m = re.findall("CDATA\[(?P<password>\w*)\]", x)
-                if m:
-                    password = m[0]
-                    print password
-                    return password
-                else:
-                    print "nothing found"
+    method = "HTTP-POST"
 
-        def read_xml(xml_file):
-            with open(xml_file, 'r') as f:
-                xml = f.read()
-                return xml
-
-        def log_results(host, port, password, method):
-            time_now = str(datetime.now())
-            print "[*] Recording successful attempt:"
-            event = " host={0}, port={1}, password={2}, method={3}\n".format(host, port, password, method)
-            print "[*] Password recovered:{0}".format(event)
-            with open("recovered_passwords.log", 'a') as f:
-                f.write(time_now)
-                f.write(event)
-
-        def rec_error(host, port, method, e):
-            time_now = str(datetime.now())
-            print "[*] Recording error:"
-            event = " host={0}, port={1}, method={2}, error={3}\n".format(host, port, method, e)
-            print "[*] Error raised:{0}".format(event)
-            with open("error.log", 'a') as f:
-                f.write(time_now)
-                f.write(event)
-
-        # def post_credentials(host, http_port):
-        try:
-            conn = httplib.HTTPConnection(host, http_port, timeout=25)
-            print "[*] Attempting to validate credentials via HTTP-POST..."
-            xml = read_xml(xml_connect)
-            conn.request("POST", body_connect, xml, headers)
-            response = conn.getresponse()
-            print response.status, response.reason
-            data = response.read()
-            if "message='OK'" in data:
-                password = get_pass_from_xml()
-                log_results(host, http_port, password, method)
+    def get_pass_from_xml():
+        with open(xml_connect) as f:
+            x = f.read()
+            m = re.findall("CDATA\[(?P<password>\w*)\]", x)
+            if m:
+                password = m[0]
+                print password
+                return password
             else:
-                m = re.findall("message='(?P<error>\w\s/\s\w)'", str(data))
-                if m:
-                    error = m[0]
-                    print "[*] Server returned: {0}".format(error)
-                else:
-                    print "[*] Server returned: {0}".format(data)
-            conn.close()
-        except Exception as e:
-            m = re.findall("message='(?P<error>\w\s/\s\w)'", str(e))
+                print "nothing found"
+
+    def read_xml(xml_file):
+        with open(xml_file, 'r') as f:
+            xml = f.read()
+            return xml
+
+    def log_results(host, port, password, method):
+        time_now = str(datetime.now())
+        print "[*] Recording successful attempt:"
+        event = " host={0}, port={1}, password={2}, method={3}\n".format(host, port, password, method)
+        print "[*] Password recovered:{0}".format(event)
+        with open("recovered_passwords.log", 'a') as f:
+            f.write(time_now)
+            f.write(event)
+
+    def rec_error(host, port, method, e):
+        time_now = str(datetime.now())
+        print "[*] Recording error:"
+        event = " host={0}, port={1}, method={2}, error={3}\n".format(host, port, method, e)
+        print "[*] Error raised:{0}".format(event)
+        with open("error.log", 'a') as f:
+            f.write(time_now)
+            f.write(event)
+
+    # def post_credentials(host, http_port):
+    try:
+        conn = httplib.HTTPConnection(host, http_port, timeout=25)
+        print "[*] Attempting to validate credentials via HTTP-POST..."
+        xml = read_xml(xml_connect)
+        conn.request("POST", body_connect, xml, headers)
+        response = conn.getresponse()
+        print response.status, response.reason
+        data = response.read()
+        if "message='OK'" in data:
+            password = get_pass_from_xml()
+            log_results(host, http_port, password, method)
+        else:
+            m = re.findall("message='(?P<error>\w\s/\s\w)'", str(data))
             if m:
                 error = m[0]
-                rec_error(host, http_port, method, error)
+                print "[*] Server returned: {0}".format(error)
+            else:
+                print "[*] Server returned: {0}".format(data)
+        conn.close()
+    except Exception as e:
+        m = re.findall("message='(?P<error>\w\s/\s\w)'", str(e))
+        if m:
+            error = m[0]
+            rec_error(host, http_port, method, error)
+    finally:
+        connection_lock.release()
 
-        # def get_host_list():
-        #     host_list_file = sys.argv[1]
-        #     with open(host_list_file, 'r') as f:
-        #         host_list = f.readlines()
-        #         host_list = [i.strip('\r\n') for i in host_list]
-        #     return host_list
+    # def get_host_list():
+    #     host_list_file = sys.argv[1]
+    #     with open(host_list_file, 'r') as f:
+    #         host_list = f.readlines()
+    #         host_list = [i.strip('\r\n') for i in host_list]
+    #     return host_list
 
-        # def run_credential_check():
-        #     hosts = get_host_list()
-        #     for host in hosts:
-        #         post_credentials(host)
+    # def run_credential_check():
+    #     hosts = get_host_list()
+    #     for host in hosts:
+    #         post_credentials(host)
 
 
 # Function parses either the default files or user input files
@@ -335,7 +334,7 @@ def inputs(user_file, password_file, ports):
 
     global users
     global passwords
-    global commonAdminPorts
+    global common_admin_ports
 
     for x in input_list:
         if x is not None:
@@ -345,14 +344,14 @@ def inputs(user_file, password_file, ports):
                 elif x is password_file:
                     passwords = f.read().splitlines()
                 elif x is ports:
-                    commonAdminPorts = [int(x) for x in f.read().split()]
+                    common_admin_ports = [int(x) for x in f.read().split()]
         else:
             with open('users.txt', 'r') as f:
                 users = f.read().splitlines()
             with open('passwords.txt', 'r') as f:
                 passwords = f.read().splitlines()
             with open('ports.txt', 'r') as f:
-                commonAdminPorts = [int(x) for x in f.read().split()]
+                common_admin_ports = [int(x) for x in f.read().split()]
 
 
 # Function scans the list or CIDR block to see which hosts are alive
@@ -385,69 +384,57 @@ def find_live_hosts(nm, addrs, iL):
 
 # splits the list of hosts into two separate lists
 # one list is used when creating each thread
-def split_hosts(hosts):
-    half = len(hosts)/2
-    return hosts[:half], hosts[half:]
+# def split_hosts(hosts):
+#     half = len(hosts)/2
+#     return hosts[:half], hosts[half:]
 
 
 # Function scans for common admin ports that might be open;
 # splits live hosts lists in to multiple lists, generates one threads for each new list
 # this speeds up scanning dramatically
-def admin_scanner(nm):
+def run_admin_scanner():
+    threads = []
     print "[*] scanning for open admin ports..."
-    if len(live_hosts) < 4:
-        try:
-            for live_host in live_hosts:
-                CheckAdminPorts(nm, live_host)
-        except Exception as error:
-            log_error(error)
-    else:
-        try:
-            # TODO: change to run multiple threads, test for number, 10, 20?
-            lhosts0, lhosts1 = split_hosts(live_hosts)
-            lhosts0a, lhosts0b = split_hosts(lhosts0)
-            lhosts1a, lhosts1b = split_hosts(lhosts1)
-            t0a = CheckAdminPorts(nm, lhosts0a)
-            t0b = CheckAdminPorts(nm, lhosts0b)
-            t1a = CheckAdminPorts(nm, lhosts1a)
-            t1b = CheckAdminPorts(nm, lhosts1b)
-            threads = [t0a, t0b, t1a, t1b]
-            for thread in threads:
-                thread.start()
-                thread.join()
-        except Exception as error:
-            log_error(error)
+    try:
+        for live_host in live_hosts:
+            t = threading.Thread(target=check_admin_ports, args=(live_host, common_admin_ports))
+            threads.append(t)
+        for thread in threads:
+            thread.start()
+            thread.join()
+    except Exception as error:
+        log_error(error)
 
 
 # Function tests hosts for default credentials on open 'admin' ports
-# splits the list of vulnerable hosts in two
-# creates two threads, one for each list
-# speeds up scanning by 50%
-# now creates four threads.
+# Utilizes threading to greatly speed up the scanning
 def run_thread():
+    threads = []
     print "[*] Testing vulnerable host ip addresses..."
-    if len(vulnerable_hosts) < 4:
-        try:
-            for vulnerable_host in vulnerable_hosts:
-                CheckVulnerablePorts(vulnerable_host)
-        except Exception as error:
-            log_error(error)
-    else:
-        try:
-            # TODO: change to run multiple threads, test for number, 10, 20?
-            vhosts0, vhosts1 = split_hosts(vulnerable_hosts)
-            vhosts0a, vhosts0b = split_hosts(vhosts0)
-            vhosts1a, vhosts1b = split_hosts(vhosts1)
-            t0a = CheckVulnerablePorts(vhosts0a)
-            t0b = CheckVulnerablePorts(vhosts0b)
-            t1a = CheckVulnerablePorts(vhosts1a)
-            t1b = CheckVulnerablePorts(vhosts1b)
-            threads = [t0a, t0b, t1a, t1b]
-            for thread in threads:
-                thread.start()
-                thread.join()
-        except Exception as error:
-            log_error(error)
+    try:
+        for vulnerable_host in vulnerable_hosts:
+            print '[*] checking >> {0}'.format(vulnerable_host.ip)
+            if 21 in vulnerable_host.ports:
+                t = threading.Thread(target=check_ftp, args=vulnerable_host)
+                threads.append(t)
+            if 22 in vulnerable_host.ports:
+                t = threading.Thread(target=check_ssh, args=vulnerable_host)
+                threads.append(t)
+            telnet_ports = [23, 2332]
+            for telnet_port in telnet_ports:
+                if telnet_port in vulnerable_host.ports:
+                    t = threading.Thread(target=check_telnet, args=vulnerable_host)
+                    threads.append(t)
+            http_ports = [8000, 8080, 8081, 8090, 9191, 9443]
+            for http_port in http_ports:
+                if http_port in vulnerable_host.ports:
+                    t = threading.Thread(target=http_post_credential_check, args=(vulnerable_host, http_port))
+                    threads.append(t)
+        for thread in threads:
+            thread.start()
+            thread.join()
+    except Exception as error:
+        log_error(error)
 
 
 # Function records all of the results from each instance of the class in to a ?csv? report
@@ -532,8 +519,6 @@ def main():
         print parser.usage
         exit(0)
     else:
-        print "[*] initializing port scanner..."
-        nm = nmap.PortScanner()  # defines port scanner function to pass to each function
         if ifile is not None:  # checks if input is a file
             addrs = ifile
             iL = True  # iL is the switch for NMAP to read from file
@@ -548,7 +533,7 @@ def main():
         try:
             find_live_hosts(nm, addrs, iL)  # Uses NMAP ping scan to check for live hosts
             # TODO: add option to disable port scan and just test ports listed in file.
-            admin_scanner(nm)  # Checks for open admin ports, defined in file.
+            run_admin_scanner()  # Checks for open admin ports, defined in file.
             run_thread()  # Starts the threads to check the open ports for default credentials.
         except Exception as error:
             log_error(error)

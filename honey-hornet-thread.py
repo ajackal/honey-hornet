@@ -10,7 +10,7 @@ import optparse
 from multiprocessing import Process
 
 lhosts = []  # writes live hosts that are found here
-commonAdminPorts = [21, 22, 23, 25, 135, 3389]  # removed 80/443; causing problems
+common_admin_ports = [21, 22, 23, 25, 135, 3389]  # removed 80/443; causing problems
 vhosts = []  # hosts that have open admin ports
 
 users = ["mike", "", "admin"]  # usernames to test
@@ -55,9 +55,9 @@ def live_hosts(nm, addrs, iL):
 # print "[*] scanning for open admin ports..."
 # for lhost in live_hosts:
 #     x = 0
-#     while x < len(commonAdminPorts):
-#         print "[*] checking {0} for open port on {1}...".format(lhost, commonAdminPorts[x])
-#         nm.scan(lhost, str(commonAdminPorts[x]))
+#     while x < len(common_admin_ports):
+#         print "[*] checking {0} for open port on {1}...".format(lhost, common_admin_ports[x])
+#         nm.scan(lhost, str(common_admin_ports[x]))
 #         x += 1
 #         lport = nm[lhost]['tcp'].keys()
 #         lport.sort()
@@ -73,7 +73,7 @@ def admin_scanner(nm):
         x += 1
         b = 'a' + str(x)  # unique class identifier
         print "[*] checking {0} for open admin ports...".format(lhost)
-        nm.scan(lhost, str(commonAdminPorts))  # nmap scan command
+        nm.scan(lhost, str(common_admin_ports))  # nmap scan command
         try:
             lport = nm[lhost]['tcp'].keys()  # retrieves tcp port results from scan
             lport.sort()  # sorts ports

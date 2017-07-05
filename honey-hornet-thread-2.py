@@ -9,7 +9,7 @@ import optparse
 from threading import Thread
 
 lhosts = []  # writes live hosts that are found here
-commonAdminPorts = [21, 22, 23, 25, 135, 3389]  # removed 80/443; causing problems
+common_admin_ports = [21, 22, 23, 25, 135, 3389]  # removed 80/443; causing problems
 vhosts = []  # hosts that have open admin ports
 
 users = ["bob", "", "admin"]  # usernames to test
@@ -55,7 +55,7 @@ def admin_scanner(nm):
         x += 1
         b = 'a' + str(x)  # unique class identifier
         print "[*] checking {0} for open admin ports...".format(lhost)
-        nm.scan(lhost, str(commonAdminPorts))  # nmap scan command
+        nm.scan(lhost, str(common_admin_ports))  # nmap scan command
         try:
             lport = nm[lhost]['tcp'].keys()  # retrieves tcp port results from scan
             lport.sort()  # sorts ports
