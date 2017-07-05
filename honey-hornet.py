@@ -401,7 +401,8 @@ def admin_scanner(nm):
     print "[*] scanning for open admin ports..."
     if len(live_hosts) < 4:
         try:
-            CheckAdminPorts(nm, live_hosts)
+            for live_host in live_hosts:
+                CheckAdminPorts(nm, live_host)
         except Exception as error:
             log_error(error)
     else:
@@ -414,14 +415,10 @@ def admin_scanner(nm):
             t0b = CheckAdminPorts(nm, lhosts0b)
             t1a = CheckAdminPorts(nm, lhosts1a)
             t1b = CheckAdminPorts(nm, lhosts1b)
-            t0a.start()
-            t0b.start()
-            t1a.start()
-            t1b.start()
-            t0a.join()
-            t0b.join()
-            t1a.join()
-            t1b.join()
+            threads = [t0a, t0b, t1a, t1b]
+            for thread in threads:
+                thread.start()
+                thread.join()
         except Exception as error:
             log_error(error)
 
@@ -435,7 +432,8 @@ def run_thread():
     print "[*] Testing vulnerable host ip addresses..."
     if len(vulnerable_hosts) < 4:
         try:
-            CheckVulnerablePorts(vulnerable_hosts)
+            for vulnerable_host in vulnerable_hosts:
+                CheckVulnerablePorts(vulnerable_host)
         except Exception as error:
             log_error(error)
     else:
@@ -448,14 +446,10 @@ def run_thread():
             t0b = CheckVulnerablePorts(vhosts0b)
             t1a = CheckVulnerablePorts(vhosts1a)
             t1b = CheckVulnerablePorts(vhosts1b)
-            t0a.start()
-            t0b.start()
-            t1a.start()
-            t1b.start()
-            t0a.join()
-            t0b.join()
-            t1a.join()
-            t1b.join()
+            threads = [t0a, t0b, t1a, t1b]
+            for thread in threads:
+                thread.start()
+                thread.join()
         except Exception as error:
             log_error(error)
 
