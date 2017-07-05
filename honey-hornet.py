@@ -76,7 +76,8 @@ class CheckAdminPorts(Thread):
                             b = VulnerableHost(lhost)  # creates an object for that host if it doesn't exist
                             vulnerable_hosts.append(b)  # appends vulnerable host to list
                         b.add_vulnerable_port(port)
-                        print '[+] port : %s >> %s' % (colored(port, 'yellow'), colored(sop, 'green'))
+                        # print '[+] port : %s >> %s' % (colored(port, 'yellow'), colored(sop, 'green'))
+                        log_open_port(lhost, port, sop)
                     else:
                         y += 1
                 except Exception as error:
@@ -125,20 +126,14 @@ class CheckVulnerablePorts(Thread):
             while x < len(passwords):
                 try:  # open telnet connection(ipaddr, port, timeout)
                     t = telnetlib.Telnet(host, port, 15)
-                    tu = t.read_until("ogin: ")
-                    print tu
+                    t.read_until("ogin: ")
                     t.write(user + "\n")
-                    print user
-                    tp = t.read_until("assword: ")
-                    print tp
-                    print passwords[x]
+                    t.read_until("assword: ")
                     t.write(passwords[x] + "\n")
-                    # tm = t.read_very_eager()
-                    # print tm
-                    t.read_until("OK")
+                    # t.read_until("OK")
                     po = t.read_all()
                     print po
-                    if "OK" in po:
+                    if "succefully" in po:
                         newcreds = "host={0}, protocol=telnet, port={1}, user={2}, password={3}".format(host,
                                                                                                         port, user,
                                                                                                         passwords[x])
@@ -211,7 +206,6 @@ class CheckVulnerablePorts(Thread):
         for user in users:
             try:
                 for password in passwords:
-                    # found = False
                     try:
                         s = pxssh.pxssh()
                         s.login(host, user, password)
@@ -276,19 +270,21 @@ class CheckVulnerablePorts(Thread):
                 return xml
 
         def log_results(host, port, password, method):
+            time_now = str(datetime.now())
             print "[*] Recording successful attempt:"
-            event = "[*] Password recovered: host={0}, port={1}, password={2}, method={3}\n".format(host, port,
-                                                                                                    password,
-                                                                                                    method)
-            print event
+            event = " host={0}, port={1}, password={2}, method={3}\n".format(host, port, password, method)
+            print "[*] Password recovered:{0}".format(event)
             with open("recovered_passwords.log", 'a') as f:
+                f.write(time_now)
                 f.write(event)
 
         def rec_error(host, port, method, e):
+            time_now = str(datetime.now())
             print "[*] Recording error:"
-            event = "[*] Error raised: host={0}, port={1}, method={2}, error={3}\n".format(host, port, method, e)
-            print event
+            event = " host={0}, port={1}, method={2}, error={3}\n".format(host, port, method, e)
+            print "[*] Error raised:{0}".format(event)
             with open("error.log", 'a') as f:
+                f.write(time_now)
                 f.write(event)
 
         # def post_credentials(host, http_port):
@@ -482,6 +478,15 @@ def rec_results(output_file, iL):
                 for x in vhost.banner:
                     y = str(vhost.ip) + ' ' + str(x)
                     b.write(y)
+
+
+def log_open_port(host, port, status):
+    time_now = datetime.now()
+    event = " host={0}, port={1}, status={2}\n".format(host, port, status)
+    print "[*] Open port found:{0}".format(event)
+    with open("open_ports.log", 'a') as f:
+        f.write(str(time_now))
+        f.write(event)
 
 
 # Logs any Exception or error that is thrown by the program.
