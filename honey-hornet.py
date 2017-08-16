@@ -13,7 +13,7 @@ from pexpect import pxssh
 import nmap
 
 
-MAX_CONNECTIONS = 10
+MAX_CONNECTIONS = 20
 CONNECTION_LOCK = BoundedSemaphore(value=MAX_CONNECTIONS)
 
 live_hosts = []  # writes live hosts that are found here
@@ -41,8 +41,7 @@ class VulnerableHost(object):
 
     def put_banner(self, port, banner_txt, status, reason, headers):
         """ adds port, banner to banner list """
-        self.banner.append(':{0} {1} {2} {3}\n{4}\n'.format(port, status, reason, banner_txt, \
-                headers))
+        self.banner.append(':{0} {1} {2} {3}\n{4}\n'.format(port, status, reason, banner_txt, headers))
 
 
 def check_admin_ports(live_host, common_admin_ports):
@@ -392,8 +391,7 @@ def run_admin_scanner():
     print "[*] scanning for open admin ports..."
     try:
         for live_host in live_hosts:
-            new_thread = threading.Thread(target=check_admin_ports, \
-                    args=(live_host, common_admin_ports))
+            new_thread = threading.Thread(target=check_admin_ports, args=(live_host, common_admin_ports))
             threads.append(new_thread)
         for thread in threads:
             thread.start()
@@ -427,8 +425,7 @@ def run_thread():
             http_ports = [8000, 8080, 8081, 8090, 9191, 9443]
             for http_port in http_ports:
                 if http_port in vulnerable_host.ports:
-                    t = threading.Thread(target=http_post_credential_check, \
-                            args=(vulnerable_host, http_port))
+                    t = threading.Thread(target=http_post_credential_check, args=(vulnerable_host, http_port))
                     threads.append(t)
         for thread in threads:
             thread.start()
@@ -451,8 +448,7 @@ def log_results(host, port, user, password, protocol):
     """ Logs credentials that are successfully recovered """
     time_now = str(datetime.now())
     print "[*] Recording successful attempt:"
-    event = " host={0}, port={1}, user={2}, password={3}, protocol={4}\n".format(host, port,\
-                                                                        user, password, protocol)
+    event = " host={0}, port={1}, user={2}, password={3}, protocol={4}\n".format(host, port, user, password, protocol)
     print "[*] Password recovered:{0}".format(event)
     with open("recovered_passwords.log", 'a') as f:
         f.write(time_now)
@@ -472,23 +468,18 @@ def main():
     """ Main program """
     start_time = datetime.now()
 
-    parser = optparse.OptionParser('usage: %prog [-i <file listing IPs> OR -c <CIDR block>]' \
-            '-u <users.txt> -p <passwords.txt> -o <output file (optional)>')
-    parser.add_option('-i', dest='ifile', type='string', \
-            help='import IP addresses from file, cannot be used with -c')
-    parser.add_option('-c', dest='cidr', type='string', \
-            help='cidr block or localhost, cannot be used with -i')
-    parser.add_option('-u', dest='ufile', type='string', \
-            help='imports users from file; else: uses default list')
-    parser.add_option('-p', dest='pfile', type='string', \
-            help='imports passwords from file; else: uses default list')
+    parser = optparse.OptionParser('usage: %prog [-i <file listing IPs> OR -c <CIDR block>] -u <users.txt>'
+                                   ' -p <passwords.txt> -o <output file (optional)>')
+    parser.add_option('-i', dest='ifile', type='string', help='import IP addresses from file, cannot be used with -c')
+    parser.add_option('-c', dest='cidr', type='string', help='cidr block or localhost, cannot be used with -i')
+    parser.add_option('-u', dest='ufile', type='string', help='imports users from file; else: uses default list')
+    parser.add_option('-p', dest='pfile', type='string', help='imports passwords from file; else: uses default list')
     parser.add_option('-a', dest='ports', type='string', help='import ports from file')
     parser.add_option('-s', dest='services', type='string', help='services to scan, all by default')
 
     (options, args) = parser.parse_args()
     ifile = options.ifile
     cidr = options.cidr
-    # ofile = options.ofile
     ufile = options.ufile
     pfile = options.pfile
     ports = options.ports
@@ -533,4 +524,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
