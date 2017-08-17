@@ -53,17 +53,17 @@ def check_admin_ports(live_host, common_admin_ports):
     try:
         CONNECTION_LOCK.acquire()
         host = live_host
-        nmap = nmap.PortScanner()  # defines port scanner function
+        scanner = nmap.PortScanner()  # defines port scanner function
         print "[*] scanning for open admin ports..."
         counter = len(vulnerable_hosts) + 1
         host_id = 'a' + str(counter)  # unique class identifier
         print "[*] checking {0} for open admin ports...".format(host)
-        nmap.scan(host, str(common_admin_ports))  # nmap scan command
-        port = nmap[host]['tcp'].keys()  # retrieves tcp port results from scan
+        scanner.scan(host, str(common_admin_ports))  # nmap scan command
+        port = scanner[host]['tcp'].keys()  # retrieves tcp port results from scan
         port.sort()  # sorts ports
         counter2 = 0
         for port in port:
-            sop = nmap[host]['tcp'][port]['state']  # defines port state variable
+            sop = scanner[host]['tcp'][port]['state']  # defines port state variable
             if sop == 'open':  # checks to see if status is open
                 if host_id not in vulnerable_hosts:  # checks to see if host already has an object
                     new_host = VulnerableHost(host)  # creates new object
@@ -350,22 +350,19 @@ def inputs(user_file, password_file, ports):
                 common_admin_ports = [int(x) for x in ports_file.read().split()]
 
 
-def find_live_hosts(addrs, iL):
+def find_live_hosts(addrs, iL, scanner):
     """ Function scans the list or CIDR block to see which hosts are alive
     writes the live hosts to the 'live_hosts' list
     also calculates the percentage of how many hosts are alive
     """
-    nmap = nmap.PortScanner()
     print "[*] scanning for live hosts..."
     try:
+        # scanner = nmap.PortScanner()
         if iL is False:
-            nmap.scan(hosts=addrs, arguments='-sn')  # ping scan to check for live hosts
+            scanner.scan(hosts=addrs, arguments='-sn')  # ping scan to check for live hosts
         else:
-            nmap.scan(arguments='-sn -iL ' + addrs)
-    except Exception as error:
-        log_error(error)
-    try:
-        hosts_list = [(x, nmap[x]['status']['state']) for x in nmap.all_hosts()]
+            scanner.scan(arguments='-sn -iL ' + addrs)
+        hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
         # prints the hosts that are alive
         for host, status in hosts_list:
             print '[+] {0} is {1}'.format(colored(host, 'yellow'), colored(status, 'green'))
@@ -377,7 +374,8 @@ def find_live_hosts(addrs, iL):
             percentage = 100 * (float(live) / float(total))
             print "[+] {0} out of {1} hosts are alive or {2}%".format(live, total, percentage)
     except Exception as error:
-        log_error(error)
+        raise
+        # log_error(error)
 
 
 def run_admin_scanner():
@@ -507,14 +505,15 @@ def main():
             addrs = cidr
             iL = False
         try:
-            if scans == 1:
-                find_live_hosts(addrs, iL)  # Uses NMAP ping scan to check for live hosts
+            scanner = nmap.PortScanner()
+            if scans == '1':
+                find_live_hosts(addrs, iL, scanner)  # Uses NMAP ping scan to check for live hosts
                 run_admin_scanner()  # Checks for open admin ports, defined in file
-            elif scans == 2:
-                find_live_hosts(addrs, iL)
+            elif scans == '2':
+                find_live_hosts(addrs, iL, scanner)
                 run_credential_test()  # Starts the threads to check the open ports for default credentials.
-            elif scans == 3:
-                find_live_hosts(addrs, iL)
+            elif scans == '3':
+                find_live_hosts(addrs, iL, scanner)
                 run_admin_scanner()
                 run_credential_test()
             else:
@@ -522,6 +521,7 @@ def main():
                 print parser.usage
                 exit(0)
         except Exception as error:
+            raise
             log_error(error)
         finally:
             # Writes to file if the output switch is given.
