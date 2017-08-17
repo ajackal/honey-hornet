@@ -400,7 +400,7 @@ def run_admin_scanner():
         log_error(error)
 
 
-def run_thread():
+def run_credential_test():
     """ Function tests hosts for default credentials on open 'admin' ports
     Utilizes threading to greatly speed up the scanning
     """
@@ -475,7 +475,7 @@ def main():
     parser.add_option('-u', dest='ufile', type='string', help='imports users from file; else: uses default list')
     parser.add_option('-p', dest='pfile', type='string', help='imports passwords from file; else: uses default list')
     parser.add_option('-a', dest='ports', type='string', help='import ports from file')
-    parser.add_option('-s', dest='services', type='string', help='services to scan, all by default')
+    parser.add_option('-s', dest='scans', type='string', help='scan types to use, 1=port scan 2=credential scan 3=both')
 
     (options, args) = parser.parse_args()
     ifile = options.ifile
@@ -483,6 +483,7 @@ def main():
     ufile = options.ufile
     pfile = options.pfile
     ports = options.ports
+    scans = options.scans
 
     # Reads users, passwords, and ports files to generate lists to test.
     inputs(ufile, pfile, ports)
@@ -509,10 +510,20 @@ def main():
             addrs = cidr
             iL = False
         try:
-            find_live_hosts(addrs, iL)  # Uses NMAP ping scan to check for live hosts
-            # TODO: add option to disable port scan and just test ports listed in file.
-            run_admin_scanner()  # Checks for open admin ports, defined in file.
-            run_thread()  # Starts the threads to check the open ports for default credentials.
+            if scans == 1:
+                find_live_hosts(addrs, iL)  # Uses NMAP ping scan to check for live hosts
+                run_admin_scanner()  # Checks for open admin ports, defined in file
+            elif scans == 2:
+                find_live_hosts(addrs, iL)
+                run_credential_test()  # Starts the threads to check the open ports for default credentials.
+            elif scans == 3:
+                find_live_hosts(addrs, iL)
+                run_admin_scanner()
+                run_credential_test()
+            else:
+                print "[!] Please define a scan type!"
+                print parser.usage
+                exit(0)
         except Exception as error:
             log_error(error)
         finally:
