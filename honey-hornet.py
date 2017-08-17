@@ -232,9 +232,6 @@ def http_post_credential_check(vulnerable_host, http_port):
                "X-Requested-With": "XMLHttpRequest",
                "Connection": "close"}
 
-    # Duplicate, can probably be removed.
-    body_connect = "xml/Connect.xml"
-
     xml_connect = "xml/Connect.xml"
 
     method = "HTTP-POST"
