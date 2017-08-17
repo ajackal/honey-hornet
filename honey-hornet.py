@@ -59,10 +59,10 @@ def check_admin_ports(live_host, common_admin_ports):
         host_id = 'a' + str(counter)  # unique class identifier
         print "[*] checking {0} for open admin ports...".format(host)
         scanner.scan(host, str(common_admin_ports))  # nmap scan command
-        port = scanner[host]['tcp'].keys()  # retrieves tcp port results from scan
-        port.sort()  # sorts ports
+        ports = scanner[host]['tcp'].keys()  # retrieves tcp port results from scan
+        ports.sort()  # sorts ports
         counter2 = 0
-        for port in port:
+        for port in ports:
             sop = scanner[host]['tcp'][port]['state']  # defines port state variable
             if sop == 'open':  # checks to see if status is open
                 if host_id not in vulnerable_hosts:  # checks to see if host already has an object
@@ -73,7 +73,7 @@ def check_admin_ports(live_host, common_admin_ports):
                 log_open_port(host, port, sop)
             else:
                 counter2 += 1
-            if counter2 == len(port):
+            if counter2 == len(ports):
                 print '[!] No open ports found.'
     except Exception as error:
         log_error(error)
