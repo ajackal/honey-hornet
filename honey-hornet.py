@@ -373,12 +373,13 @@ def find_live_hosts(addrs, iL, scanner):
             global percentage
             percentage = 100 * (float(live) / float(total))
             print "[+] {0} out of {1} hosts are alive or {2}%".format(live, total, percentage)
-            with open("open_ports.log", 'a') as f:
+            with open("open_ports.log", 'a') as log_file:
+                new_log = "############## NEW SCAN ##############"
+                log_file.write(new_log)
                 log_totals = "{0}\{1} = {2}%".format(live, total, percentage)
-                f.write(log_totals)
+                log_file.write(log_totals)
     except Exception as error:
-        raise
-        # log_error(error)
+        log_error(error)
 
 
 def run_admin_scanner():
@@ -438,9 +439,9 @@ def log_open_port(host, port, status):
     time_now = datetime.now()
     event = " host='{0}'', port={1}, status='{2}'\n".format(host, port, status)
     print "[*] Open port found:{0}".format(event)
-    with open("open_ports.log", 'a') as f:
-        f.write(str(time_now))
-        f.write(event)
+    with open("open_ports.log", 'a') as log_file:
+        log_file.write(str(time_now))
+        log_file.write(event)
 
 
 def log_results(host, port, user, password, protocol):
@@ -449,9 +450,9 @@ def log_results(host, port, user, password, protocol):
     print "[*] Recording successful attempt:"
     event = " host='{0}', port={1}, user='{2}', password='{3}', protocol='{4}'\n".format(host, port, user, password, protocol)
     print "[*] Password recovered:{0}".format(event)
-    with open("recovered_passwords.log", 'a') as f:
-        f.write(time_now)
-        f.write(event)
+    with open("recovered_passwords.log", 'a') as log_file:
+        log_file.write(time_now)
+        log_file.write(event)
 
 
 def log_error(error):
