@@ -373,6 +373,9 @@ def find_live_hosts(addrs, iL, scanner):
             global percentage
             percentage = 100 * (float(live) / float(total))
             print "[+] {0} out of {1} hosts are alive or {2}%".format(live, total, percentage)
+            with open("open_ports.log", 'a') as f:
+                log_totals = "{0}\{1} = {2}%".format(live, total, percentage)
+                f.write(log_totals)
     except Exception as error:
         raise
         # log_error(error)
@@ -390,6 +393,7 @@ def run_admin_scanner():
             threads.append(new_thread)
         for thread in threads:
             thread.start()
+        for thread in threads:
             thread.join()
     except Exception as error:
         log_error(error)
@@ -430,9 +434,9 @@ def run_credential_test():
 
 
 def log_open_port(host, port, status):
-    """ Logs any host with an open port to a file """
+    """ Logs any host with an open port to a file. """
     time_now = datetime.now()
-    event = " host={0}, port={1}, status={2}\n".format(host, port, status)
+    event = " host='{0}'', port={1}, status='{2}'\n".format(host, port, status)
     print "[*] Open port found:{0}".format(event)
     with open("open_ports.log", 'a') as f:
         f.write(str(time_now))
@@ -440,10 +444,10 @@ def log_open_port(host, port, status):
 
 
 def log_results(host, port, user, password, protocol):
-    """ Logs credentials that are successfully recovered """
+    """ Logs credentials that are successfully recovered. """
     time_now = str(datetime.now())
     print "[*] Recording successful attempt:"
-    event = " host={0}, port={1}, user={2}, password={3}, protocol={4}\n".format(host, port, user, password, protocol)
+    event = " host='{0}', port={1}, user='{2}', password='{3}', protocol='{4}'\n".format(host, port, user, password, protocol)
     print "[*] Password recovered:{0}".format(event)
     with open("recovered_passwords.log", 'a') as f:
         f.write(time_now)
@@ -463,8 +467,7 @@ def main():
     """ Main program """
     start_time = datetime.now()
 
-    parser = optparse.OptionParser('usage: %prog [-i <file listing IPs> OR -c <CIDR block>] -u <users.txt>'
-                                   ' -p <passwords.txt> -o <output file (optional)>')
+    parser = optparse.OptionParser('usage: %prog <scan type> <targets> <options>)
     parser.add_option('-i', dest='ifile', type='string', help='import IP addresses from file, cannot be used with -c')
     parser.add_option('-c', dest='cidr', type='string', help='cidr block or localhost, cannot be used with -i')
     parser.add_option('-u', dest='ufile', type='string', help='imports users from file; else: uses default list')
