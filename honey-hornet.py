@@ -283,7 +283,7 @@ def http_post_credential_check(vulnerable_host, http_port):
         print "[*] Attempting to validate credentials via HTTP-POST..."
         xml = read_xml(xml_connect)
         # should be able to remove the "body_connect" (xml duplicate)
-        conn.request("POST", body_connect, xml, headers)
+        conn.request("POST", xml, headers)
         response = conn.getresponse()
         print response.status, response.reason
         data = response.read()
@@ -306,18 +306,6 @@ def http_post_credential_check(vulnerable_host, http_port):
             rec_error(host, http_port, method, error)
     finally:
         CONNECTION_LOCK.release()
-
-    # def get_host_list():
-    #     host_list_file = sys.argv[1]
-    #     with open(host_list_file, 'r') as f:
-    #         host_list = f.readlines()
-    #         host_list = [i.strip('\r\n') for i in host_list]
-    #     return host_list
-
-    # def run_credential_check():
-    #     hosts = get_host_list()
-    #     for host in hosts:
-    #         post_credentials(host)
 
 
 def inputs(user_file, password_file, ports):
@@ -374,7 +362,7 @@ def find_live_hosts(addrs, iL, scanner):
             percentage = 100 * (float(live) / float(total))
             print "[+] {0} out of {1} hosts are alive or {2}%".format(live, total, percentage)
             with open("open_ports.log", 'a') as log_file:
-                new_log = "############## NEW SCAN ##############"
+                new_log = "##############  NEW SCAN  ##############"
                 log_file.write(new_log)
                 log_totals = "{0}\{1} = {2}%".format(live, total, percentage)
                 log_file.write(log_totals)
@@ -429,6 +417,7 @@ def run_credential_test():
                     threads.append(t)
         for thread in threads:
             thread.start()
+        for thread in threads:
             thread.join()
     except Exception as error:
         log_error(error)
@@ -437,7 +426,7 @@ def run_credential_test():
 def log_open_port(host, port, status):
     """ Logs any host with an open port to a file. """
     time_now = datetime.now()
-    event = " host='{0}'', port={1}, status='{2}'\n".format(host, port, status)
+    event = " host='{0}', port={1}, status='{2}'\n".format(host, port, status)
     print "[*] Open port found:{0}".format(event)
     with open("open_ports.log", 'a') as log_file:
         log_file.write(str(time_now))
@@ -448,7 +437,8 @@ def log_results(host, port, user, password, protocol):
     """ Logs credentials that are successfully recovered. """
     time_now = str(datetime.now())
     print "[*] Recording successful attempt:"
-    event = " host='{0}', port={1}, user='{2}', password='{3}', protocol='{4}'\n".format(host, port, user, password, protocol)
+    event = " host='{0}', port={1}, user='{2}', password='{3}', protocol='{4}'\n".format(host, port, user, password,
+                                                                                         protocol)
     print "[*] Password recovered:{0}".format(event)
     with open("recovered_passwords.log", 'a') as log_file:
         log_file.write(time_now)
@@ -468,7 +458,7 @@ def main():
     """ Main program """
     start_time = datetime.now()
 
-    parser = optparse.OptionParser('usage: %prog <scan type> <targets> <options>)
+    parser = optparse.OptionParser('usage: %prog <scan type> <targets> <options>')
     parser.add_option('-i', dest='ifile', type='string', help='import IP addresses from file, cannot be used with -c')
     parser.add_option('-c', dest='cidr', type='string', help='cidr block or localhost, cannot be used with -i')
     parser.add_option('-u', dest='ufile', type='string', help='imports users from file; else: uses default list')
@@ -525,12 +515,8 @@ def main():
                 print parser.usage
                 exit(0)
         except Exception as error:
-            raise
             log_error(error)
         finally:
-            # Writes to file if the output switch is given.
-            # if ofile is not None:
-            #     rec_results(ofile, iL)
             print datetime.now() - start_time  # Calculates run time for the program.
 
 
