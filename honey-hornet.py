@@ -100,6 +100,7 @@ def check_telnet(vulnerable_host):
         for user in users:
             x = 0
             while x < len(passwords):
+                print user, passwords[x]
                 t = telnetlib.Telnet(host, port, 15)
                 t.read_until("ogin: ")
                 t.write(user + "\n")
@@ -107,17 +108,23 @@ def check_telnet(vulnerable_host):
                 t.write(passwords[x] + "\n")
                 po = t.read_all()
                 print po
-                if "successfully" in po:
+                if "OK" in po:
+                    # if t.read_until("OK", 10):
                     protocol = "telnet"
                     log_results(host, port, user, passwords[x], protocol)
-                    t.write("quit\n")
+                    t.close()
                     break
-                else:
+                elif "incorrect" in po:
+                    log_error("Password incorrect")
+                    t.close()
                     x += 1
-                    if x == len(passwords) - 1:
-                        print "[!] Password not found."
-                        # print "[!] ", e  # prints thrown exception, for debug
-                        # TODO: fix looping issue, password found, continues to test passwords
+                else:
+                    t.close()
+                    x += 1
+                if x == len(passwords):
+                    print "[!] Password not found."
+                    # print "[!] ", e  # prints thrown exception, for debug
+                    # TODO: fix looping issue, password found, continues to test passwords
     except Exception as error:
         log_error(error)
     finally:
@@ -181,18 +188,19 @@ def check_ssh(vulnerable_host):
     """ Function tests the SSH service with all of the users and passwords given """
     try:
         CONNECTION_LOCK.acquire()
+
         host = vulnerable_host.ip
         print "[*] Testing SSH service on {0}...".format(host)
         for user in users:
             for password in passwords:
-                ssh_conn = pxssh.pxssh()
+                ssh_conn = pxssh.pxssh(options={"StrictHostKeyChecking": "no", "-oHostKeyAlgorithms": "+ssh-dss"})
                 ssh_conn.login(host, user, password)
                 port = "22"
                 protocol = "SSH"
                 log_results(host, port, user, password, protocol)
                 ssh_conn.logout()
                 ssh_conn.close()
-    except Exception as error:
+    except pxssh.ExceptionPxssh as error:
         log_error(error)
     finally:
         CONNECTION_LOCK.release()
@@ -362,9 +370,9 @@ def find_live_hosts(addrs, iL, scanner):
             percentage = 100 * (float(live) / float(total))
             print "[+] {0} out of {1} hosts are alive or {2}%".format(live, total, percentage)
             with open("open_ports.log", 'a') as log_file:
-                new_log = "##############  NEW SCAN  ##############"
+                new_log = "##############  NEW SCAN  ##############\n"
                 log_file.write(new_log)
-                log_totals = "{0}\{1} = {2}%".format(live, total, percentage)
+                log_totals = "{0}\{1} = {2}%\n".format(live, total, percentage)
                 log_file.write(log_totals)
     except Exception as error:
         log_error(error)
@@ -398,17 +406,17 @@ def run_credential_test():
         for vulnerable_host in vulnerable_hosts:
             print '[*] checking >> {0}'.format(vulnerable_host.ip)
             if 21 in vulnerable_host.ports:
-                t = threading.Thread(target=check_ftp_anon, args=vulnerable_host)
+                t = threading.Thread(target=check_ftp_anon, args=(vulnerable_host, ))
                 threads.append(t)
-                t1 = threading.Thread(target=check_ftp, args=vulnerable_host)
+                t1 = threading.Thread(target=check_ftp, args=(vulnerable_host, ))
                 threads.append(t1)
             if 22 in vulnerable_host.ports:
-                t = threading.Thread(target=check_ssh, args=vulnerable_host)
+                t = threading.Thread(target=check_ssh, args=(vulnerable_host, ))
                 threads.append(t)
             telnet_ports = [23, 2332]
             for telnet_port in telnet_ports:
                 if telnet_port in vulnerable_host.ports:
-                    t = threading.Thread(target=check_telnet, args=vulnerable_host)
+                    t = threading.Thread(target=check_telnet, args=(vulnerable_host, ))
                     threads.append(t)
             http_ports = [8000, 8080, 8081, 8090, 9191, 9443]
             for http_port in http_ports:
