@@ -1,10 +1,12 @@
+#! /usr/bin/env python
+
 import telnetlib
 import optparse
 import time
 from datetime import datetime
 
 
-def check_telnet(vulnerable_host, port, user, password):
+def check_telnet(host, port, user, password):
     """ Tries to connect via Telnet with common credentials
     Then it prints the results of the connection attempt
     Due to the way TELNETLIB works and the different implementations of telnet
@@ -13,7 +15,6 @@ def check_telnet(vulnerable_host, port, user, password):
     Web-based credential testing is much better and more standardized
     """
     try:
-        host = vulnerable_host
         # user = "user"
         # password = "12345"
         print "[*] Testing Telnet connection on {0}...".format(host)
@@ -97,3 +98,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
