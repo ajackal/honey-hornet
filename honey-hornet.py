@@ -92,6 +92,49 @@ def check_telnet(vulnerable_host):
     try:
         CONNECTION_LOCK.acquire()
         host = vulnerable_host.ip
+        user = "user"
+        password = "12345"
+        print "[*] Testing Telnet connection on {0}...".format(host)
+        if 2332 in vulnerable_host.ports:
+            port = 2332
+        else:
+            port = 23
+        t = telnetlib.Telnet(host, port, 15)
+        output = t.read_eager()
+        print output
+        t.read_until("login:")
+        t.write(user + "\n")
+        t.read_until("Password:")
+        t.write(password + "\n")
+        po = t.read_eager()
+        print po
+        if "OK" in po:
+            # if t.read_until("OK", 10):
+            protocol = "telnet"
+            log_results(host, port, user, password, protocol)
+            t.close()
+        elif "incorrect" in po:
+            log_error("Password incorrect")
+            t.close()
+        else:
+            t.close()
+    except Exception as error:
+        log_error(error)
+    finally:
+        CONNECTION_LOCK.release()
+
+
+def check_telnet_brute(vulnerable_host):
+    """ Tries to connect via Telnet with common credentials
+    Then it prints the results of the connection attempt
+    Due to the way TELNETLIB works and the different implementations of telnet
+    This is fairly inefficient way to test credentials
+    Really needs to be customized based on the telnet implementation
+    Web-based credential testing is much better and more standardized
+    """
+    try:
+        CONNECTION_LOCK.acquire()
+        host = vulnerable_host.ip
         print "[*] Testing Telnet connection on {0}...".format(host)
         if 2332 in vulnerable_host.ports:
             port = 2332
