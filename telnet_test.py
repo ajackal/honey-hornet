@@ -1,5 +1,6 @@
 import telnetlib
 import optparse
+import time
 from datetime import datetime
 
 
@@ -16,14 +17,18 @@ def check_telnet(vulnerable_host, port, user, password):
         # user = "user"
         # password = "12345"
         print "[*] Testing Telnet connection on {0}...".format(host)
+        print "[*] username: {0} password: {1} port: {2}".format(user, password, port)
         t = telnetlib.Telnet(host, port, 15)
-        output = t.read_eager()
-        print output
-        t.read_until("login:")
-        t.write(user + "\n")
-        t.read_until("Password:")
-        t.write(password + "\n")
-        po = t.read_eager()
+        # output = t.read_eager()
+        # print output
+        # t.read_until("login:")
+        time.sleep(3)
+        t.write(user + "\r\n")
+        # t.read_until("Password:")
+        time.sleep(3)
+        t.write(password + "\r\n")
+        time.sleep(3)
+        po = t.read_very_eager()
         print po
         if "OK" in po:
             # if t.read_until("OK", 10):
