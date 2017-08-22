@@ -15,6 +15,7 @@ import nmap
 
 MAX_CONNECTIONS = 20
 CONNECTION_LOCK = BoundedSemaphore(value=MAX_CONNECTIONS)
+TIMER_DELAY = 3
 
 live_hosts = []  # writes live hosts that are found here
 vulnerable_hosts = []  # hosts that have open admin ports
@@ -42,6 +43,10 @@ class VulnerableHost(object):
     def put_banner(self, port, banner_txt, status, reason, headers):
         """ adds port, banner to banner list """
         self.banner.append(':{0} {1} {2} {3}\n{4}\n'.format(port, status, reason, banner_txt, headers))
+
+
+# TODO: Add credential checks back to a class.
+# class HoneyHornet():
 
 
 def check_admin_ports(live_host, common_admin_ports):
@@ -81,47 +86,46 @@ def check_admin_ports(live_host, common_admin_ports):
         CONNECTION_LOCK.release()
 
 
-def check_telnet(vulnerable_host):
+def check_telnet(host, port, user, password):
     """ Tries to connect via Telnet with common credentials
     Then it prints the results of the connection attempt
     Due to the way TELNETLIB works and the different implementations of telnet
     This is fairly inefficient way to test credentials
     Really needs to be customized based on the telnet implementation
     Web-based credential testing is much better and more standardized
+
+    UPDATE: Found that using a time.sleep() pause is a much more effective way of
+    inputing credentials when testing. Generally, an "OK" response is received
+    almost immediately when the correct credentials are supplied. When the wrong
+    credentials are supplied, the repsone is much more delayed. A 3 second timeout
+    has been effective.
     """
     try:
-        CONNECTION_LOCK.acquire()
-        host = vulnerable_host.ip
-        user = "user"
-        password = "12345"
         print "[*] Testing Telnet connection on {0}...".format(host)
-        if 2332 in vulnerable_host.ports:
-            port = 2332
-        else:
-            port = 23
+        # print "[*] username: {0} password: {1} port: {2}".format(user, password, port)
         t = telnetlib.Telnet(host, port, 15)
-        output = t.read_eager()
-        print output
-        t.read_until("login:")
-        t.write(user + "\n")
-        t.read_until("Password:")
-        t.write(password + "\n")
-        po = t.read_eager()
-        print po
-        if "OK" in po:
-            # if t.read_until("OK", 10):
+        # output = t.read_eager()
+        # print output
+        # t.read_until("login:")
+        time.sleep(TIMER_DELAY)
+        t.write(user + "\r\n")
+        # t.read_until("Password:")
+        time.sleep(TIMER_DELAY)
+        t.write(password + "\r\n")
+        time.sleep(TIMER_DELAY)
+        server_response = t.read_very_eager()
+        # print server_response
+        if "OK" in server_response:
             protocol = "telnet"
             log_results(host, port, user, password, protocol)
             t.close()
-        elif "incorrect" in po:
-            log_error("Password incorrect")
+        elif "incorrect" in server_resposne:
+            log_error("Password incorrect.")
             t.close()
         else:
             t.close()
     except Exception as error:
         log_error(error)
-    finally:
-        CONNECTION_LOCK.release()
 
 
 def check_telnet_brute(vulnerable_host):

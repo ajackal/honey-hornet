@@ -6,6 +6,9 @@ import time
 from datetime import datetime
 
 
+TIMER_DELAY = 3
+
+
 def check_telnet(host, port, user, password):
     """ Tries to connect via Telnet with common credentials
     Then it prints the results of the connection attempt
@@ -13,31 +16,34 @@ def check_telnet(host, port, user, password):
     This is fairly inefficient way to test credentials
     Really needs to be customized based on the telnet implementation
     Web-based credential testing is much better and more standardized
+
+    UPDATE: Found that using a time.sleep() pause is a much more effective way of
+    inputing credentials when testing. Generally, an "OK" response is received
+    almost immediately when the correct credentials are supplied. When the wrong
+    credentials are supplied, the repsone is much more delayed. A 3 second timeout
+    has been effective.
     """
     try:
-        # user = "user"
-        # password = "12345"
         print "[*] Testing Telnet connection on {0}...".format(host)
-        print "[*] username: {0} password: {1} port: {2}".format(user, password, port)
+        # print "[*] username: {0} password: {1} port: {2}".format(user, password, port)
         t = telnetlib.Telnet(host, port, 15)
         # output = t.read_eager()
         # print output
         # t.read_until("login:")
-        time.sleep(3)
+        time.sleep(TIMER_DELAY)
         t.write(user + "\r\n")
         # t.read_until("Password:")
-        time.sleep(3)
+        time.sleep(TIMER_DELAY)
         t.write(password + "\r\n")
-        time.sleep(3)
-        po = t.read_very_eager()
-        print po
-        if "OK" in po:
-            # if t.read_until("OK", 10):
+        time.sleep(TIMER_DELAY)
+        server_response = t.read_very_eager()
+        # print server_response
+        if "OK" in server_response:
             protocol = "telnet"
             log_results(host, port, user, password, protocol)
             t.close()
-        elif "incorrect" in po:
-            log_error("Password incorrect")
+        elif "incorrect" in server_resposne:
+            log_error("Password incorrect.")
             t.close()
         else:
             t.close()
@@ -72,15 +78,12 @@ def main():
 
     parser = optparse.OptionParser('usage: %prog <scan type> <targets> <options>')
     parser.add_option('-i', dest='ifile', type='string', help='import IP addresses from file, cannot be used with -c')
-    parser.add_option('-c', dest='cidr', type='string', help='cidr block or localhost, cannot be used with -i')
     parser.add_option('-u', dest='user', type='string', help='imports users from file; else: uses default list')
     parser.add_option('-p', dest='password', type='string', help='imports passwords from file; else: uses default list')
-    parser.add_option('-a', dest='port', type='string', help='import ports from file')
-    parser.add_option('-s', dest='scans', type='string', help='scan types to use, 1=port scan 2=credential scan 3=both')
+    parser.add_option('-o', dest='port', type='string', help='import ports from file')
 
     (options, args) = parser.parse_args()
     ifile = options.ifile
-    cidr = options.cidr
     user = options.user
     password = options.password
     port = options.port
