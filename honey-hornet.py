@@ -53,6 +53,11 @@ class HoneyHornet:
             f.write(log_error_message)
             print "[*] Error logged: {0}".format(error)
 
+    def build_ports_list(self, ports):
+        with open("ports.txt", 'r') as ports_file:
+            ports_list = [int(x) for x in ports_file.read().split()]
+            return ports_list
+
     def inputs(self, user_file, password_file, ports):
         """ Function parses either the default files or user input files
         into the appropriate lists to run the program
@@ -66,18 +71,23 @@ class HoneyHornet:
                     with open(thing, 'r') as input_file:
                         if thing is user_file:
                             users = input_file.read().splitlines()
+                            return users
                         elif thing is password_file:
                             passwords = input_file.read().splitlines()
+                            return passwords
                         elif thing is ports:
                             ports_list = [int(x) for x in input_file.read().split()]
+                            return ports_list
                 else:
                     with open('users.txt', 'r') as user_file:
                         users = user_file.read().splitlines()
+                        return users
                     with open('passwords.txt', 'r') as password_file:
                         passwords = password_file.read().splitlines()
+                        return passwords
                     with open('ports.txt', 'r') as ports_file:
                         ports_list = [int(x) for x in ports_file.read().split()]
-            return users, passwords, ports_list
+                        return ports_list
         except Exception as error:
             self.log_error(error)
             return False
@@ -118,7 +128,8 @@ class HoneyHornet:
         Tests all live host for open 'admin' ports
         """
         try:
-            self.CONNECTION_LOCK.acquire()
+            print ports_list
+            # self.CONNECTION_LOCK.acquire()
             host = live_host
             scanner = nmap.PortScanner()  # defines port scanner function
             print "[*] scanning for open admin ports..."
@@ -145,25 +156,30 @@ class HoneyHornet:
                     print '[!] No open ports found.'
                     return False
         except Exception as error:
+            raise
             self.log_error(error)
-        finally:
-            self.CONNECTION_LOCK.release()
+        # finally:
+        #     self.CONNECTION_LOCK.release()
 
-    def run_admin_scanner(self):
+    def run_admin_scanner(self, ports):
         """ Function scans for common admin ports that might be open;
         Starts a thread for each host dramatically speeding up the scan
         """
         threads = []
+        ports_list = self.build_ports_list(ports)
         print "[*] scanning for open admin ports..."
         try:
             for live_host in self.live_hosts:
-                new_thread = threading.Thread(target=self.check_admin_ports, args=(live_host, self.ports_list))
+            #    print live_host
+            #    self.check_admin_ports(live_host, ports_list)
+                new_thread = threading.Thread(target=self.check_admin_ports, args=(live_host, ports_list))
                 threads.append(new_thread)
             for thread in threads:
                 thread.start()
             for thread in threads:
                 thread.join()
         except Exception as error:
+            raise
             self.log_error(error)
 
 
@@ -560,8 +576,9 @@ def main():
     ports = options.ports
     scans = options.scans
 
+    hh = HoneyHornet()
     # Reads users, passwords, and ports files to generate lists to test.
-    HoneyHornet().inputs(ufile, pfile, ports)
+    # hh.inputs(ufile, pfile, ports)
 
     # Validates the input options.
     if ifile is not None and cidr is not None:
@@ -593,15 +610,19 @@ def main():
                 HoneyHornet().find_live_hosts(addrs, iL)
                 CheckCredentials().run_credential_test()
             elif scans == '3':
-                HoneyHornet().find_live_hosts(addrs, iL)
-                HoneyHornet().run_admin_scanner()
+                hh.find_live_hosts(addrs, iL)
+                # for live_host in HoneyHornet().live_hosts:
+                #     print live_host
+                #     hh.check_admin_ports(live_host, ports)
+                hh.run_admin_scanner(ports)
                 CheckCredentials().run_credential_test()
             else:
                 print "[!] Please define a scan type!"
                 print parser.usage
                 exit(0)
         except Exception as error:
-            HoneyHornet().log_error(error)
+            raise
+            hh.log_error(error)
         finally:
             print datetime.now() - start_time  # Calculates run time for the program.
 
