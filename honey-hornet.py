@@ -383,7 +383,8 @@ class CheckCredentials(VulnerableHost):
             print "[*] Testing SSH service on {0}...".format(host)
             for user in self.users:
                 for password in self.passwords:
-                    ssh_conn = pxssh.pxssh(options={"StrictHostKeyChecking": "no", "-oHostKeyAlgorithms": "+ssh-dss"})
+                    ssh_conn = pxssh.pxssh()
+                    # ssh_conn = pxssh.pxssh(options={"StrictHostKeyChecking": "no", "-oHostKeyAlgorithms": "+ssh-dss"})
                     ssh_conn.login(host, user, password)
                     port = "22"
                     protocol = "SSH"
