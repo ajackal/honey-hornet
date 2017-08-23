@@ -481,7 +481,7 @@ class CheckCredentials(VulnerableHost):
 def main():
     """ Main program """
     start_time = datetime.now()
-
+    # TODO: upgrade to ArgParser
     parser = optparse.OptionParser('usage: %prog <scan type> <targets> <options>')
     parser.add_option('-i', dest='ifile', type='string', help='import IP addresses from file, cannot be used with -c')
     parser.add_option('-c', dest='cidr', type='string', help='cidr block or localhost, cannot be used with -i')
