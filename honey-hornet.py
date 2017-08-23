@@ -90,7 +90,6 @@ class HoneyHornet:
                     log_totals = "{0}\{1} = {2}%\n".format(live, total, percentage)
                     log_file.write(log_totals)
         except Exception as error:
-            raise
             self.log_error(error)
 
     def check_admin_ports(self, live_host, ports_list):
