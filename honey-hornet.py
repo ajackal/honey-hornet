@@ -57,6 +57,8 @@ class HoneyHornet:
 
     def build_ports_list(self, ports):
         """ Reads a file to build a list of ports to scan. """
+        if ports is None:
+            ports = "ports.txt"
         with open(ports, 'r') as ports_file:
             ports_list = [int(x) for x in ports_file.read().split()]
             return ports_list
@@ -88,6 +90,7 @@ class HoneyHornet:
                     log_totals = "{0}\{1} = {2}%\n".format(live, total, percentage)
                     log_file.write(log_totals)
         except Exception as error:
+            raise
             self.log_error(error)
 
     def check_admin_ports(self, live_host, ports_list):
@@ -232,7 +235,7 @@ class CheckCredentials(VulnerableHost):
             self.log_error(error)
             return False
 
-    def check_telnet(self, host, port, credentials):
+    def check_telnet(self, vulnerable_host, port, credentials):
         """ Tries to connect via Telnet with common credentials
         Then it prints the results of the connection attempt
         Due to the way TELNETLIB works and the different implementations of telnet
@@ -249,6 +252,7 @@ class CheckCredentials(VulnerableHost):
         try:
             self.CONNECTION_LOCK.acquire()
             for credential in credentials:
+                host = vulnerable_host.ip
                 user = credential[0]
                 password = credential[1]
                 print "[*] Testing Telnet connection on {0}...".format(host)
@@ -506,9 +510,11 @@ class CheckCredentials(VulnerableHost):
                 if 22 in vulnerable_host.ports:
                     t = threading.Thread(target=self.check_ssh, args=(vulnerable_host, credentials_to_check))
                     threads.append(t)
-                if set(self.telnet_ports) & set(vulnerable_host.ports):
-                    t = threading.Thread(target=self.check_telnet, args=(vulnerable_host, credentials_to_check))
-                    threads.append(t)
+                ports_to_check = set(self.telnet_ports) & set(vulnerable_host.ports)
+                if ports_to_check:
+                    for port in ports_to_check:
+                        t = threading.Thread(target=self.check_telnet, args=(vulnerable_host, port, credentials_to_check))
+                        threads.append(t)
                 if set(self.http_ports) & set(vulnerable_host.ports):
                     t0 = threading.Thread(target=self.banner_grab, args=(vulnerable_host, ))
                     t1 = threading.Thread(target=self.http_post_xml, args=(vulnerable_host, ))
@@ -585,6 +591,7 @@ def main():
                 print parser.usage
                 exit(0)
         except Exception as error:
+            raise
             hh.log_error(error)
         finally:
             print datetime.now() - start_time  # Calculates run time for the program.
