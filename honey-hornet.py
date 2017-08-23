@@ -282,55 +282,6 @@ class CheckCredentials(VulnerableHost):
         finally:
             self.CONNECTION_LOCK.release()
 
-    def check_telnet_brute(self, vulnerable_host, users, passwords):
-        """ Tries to connect via Telnet with common credentials
-        Then it prints the results of the connection attempt
-        Due to the way TELNETLIB works and the different implementations of telnet
-        This is fairly inefficient way to test credentials
-        Really needs to be customized based on the telnet implementation
-        Web-based credential testing is much better and more standardized
-        """
-        try:
-            self.CONNECTION_LOCK.acquire()
-            host = vulnerable_host.ip
-            print "[*] Testing Telnet connection on {0}...".format(host)
-            if 2332 in vulnerable_host.ports:
-                port = 2332
-            else:
-                port = 23
-            for user in users:
-                x = 0
-                while x < len(passwords):
-                    print user, passwords[x]
-                    t = telnetlib.Telnet(host, port, 15)
-                    t.read_until("ogin: ")
-                    t.write(user + "\n")
-                    t.read_until("assword: ")
-                    t.write(passwords[x] + "\n")
-                    po = t.read_all()
-                    print po
-                    if "OK" in po:
-                        # if t.read_until("OK", 10):
-                        protocol = "telnet"
-                        self.log_results(host, port, user, passwords[x], protocol)
-                        t.close()
-                        break
-                    elif "incorrect" in po:
-                        self.log_error("Password incorrect")
-                        t.close()
-                        x += 1
-                    else:
-                        t.close()
-                        x += 1
-                    if x == len(passwords):
-                        print "[!] Password not found."
-                        # print "[!] ", e  # prints thrown exception, for debug
-                        # TODO: fix looping issue, password found, continues to test passwords
-        except Exception as error:
-            self.log_error(error)
-        finally:
-            self.CONNECTION_LOCK.release()
-
     def check_ftp_anon(self, vulnerable_host):
         """ Function checks the FTP service for anonymous log-ins and does an FTP banner grab """
         try:
