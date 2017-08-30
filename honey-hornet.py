@@ -26,6 +26,13 @@ class HoneyHornet:
         self.TIMER_DELAY = 3
         self.users = []
         self.passwords = []
+        self.banner = False
+
+    def add_banner_grab(self, banner):
+        if banner == '1':
+            self.banner = True
+        else:
+            self.banner = False
 
     def log_open_port(self, host, port, status):
         """ Logs any host with an open port to a file. """
@@ -367,6 +374,10 @@ class CheckCredentials(VulnerableHost):
                 print http_r1.status, http_r1.reason
                 # puts banner into the class instance of the host
                 vulnerable_host.put_banner(http_port, banner_txt, http_r1.status, http_r1.reason, headers)
+                with open('banner_grabs.log') as banner_log:
+                    banner_to_log = "host={0}, http_port={1},\nheaders={2},\nbanner={3}\n".format(host, http_port,
+                                                                                                  headers, banner_txt)
+                    banner_log.write(banner_to_log)
         except Exception as error:
             self.log_error(error)
         finally:
@@ -466,10 +477,11 @@ class CheckCredentials(VulnerableHost):
                         t = threading.Thread(target=self.check_telnet, args=(vulnerable_host, port, credentials_to_check))
                         threads.append(t)
                 if set(self.http_ports) & set(vulnerable_host.ports):
-                    t0 = threading.Thread(target=self.banner_grab, args=(vulnerable_host, ))
-                    t1 = threading.Thread(target=self.http_post_xml, args=(vulnerable_host, ))
+                    t0 = threading.Thread(target=self.http_post_xml, args=(vulnerable_host,))
                     threads.append(t0)
-                    threads.append(t1)
+                    if self.banner is True:
+                        t1 = threading.Thread(target=self.banner_grab, args=(vulnerable_host, ))
+                        threads.append(t1)
             for thread in threads:
                 thread.start()
             for thread in threads:
@@ -489,6 +501,7 @@ def main():
     parser.add_option('-p', dest='pfile', type='string', help='imports passwords from file; else: uses default list')
     parser.add_option('-a', dest='ports', type='string', help='import ports from file')
     parser.add_option('-s', dest='scans', type='string', help='scan types to use, 1=port scan 2=credential scan 3=both')
+    parser.add_option('-b', dest='banner', type='string', help='grab banner? 0=no(default) 1=yes')
 
     (options, args) = parser.parse_args()
     ifile = options.ifile
@@ -497,10 +510,14 @@ def main():
     pfile = options.pfile
     ports = options.ports
     scans = options.scans
+    banner = options.banner
 
     hh = HoneyHornet()
     # Reads users, passwords, and ports files to generate lists to test.
     # hh.inputs(ufile, pfile, ports)
+
+    if banner is not None:
+        hh.add_banner_grab(banner)
 
     # Validates the input options.
     if ifile is not None and cidr is not None:
@@ -541,7 +558,6 @@ def main():
                 print parser.usage
                 exit(0)
         except Exception as error:
-            raise
             hh.log_error(error)
         finally:
             print datetime.now() - start_time  # Calculates run time for the program.
