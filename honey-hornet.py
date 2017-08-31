@@ -221,7 +221,7 @@ class CheckCredentials(VulnerableHost):
         into the appropriate lists to run the program
         """
         file_list = [user_file, password_file]
-
+        # TODO: finish fixing credentials using the list(itertools()) for user input
         try:
             for thing in file_list:
                 if thing is not None:
@@ -494,6 +494,7 @@ def main():
     """ Main program """
     start_time = datetime.now()
     # TODO: upgrade to ArgParser
+    # TODO: add resume option (read from file)
     parser = optparse.OptionParser('usage: %prog <scan type> <targets> <options>')
     parser.add_option('-i', dest='ifile', type='string', help='import IP addresses from file, cannot be used with -c')
     parser.add_option('-c', dest='cidr', type='string', help='cidr block or localhost, cannot be used with -i')
