@@ -109,13 +109,10 @@ class HoneyHornet:
         # let Nmap do the threading...
         try:
             # self.CONNECTION_LOCK.acquire()
-            # host = live_host
             scanner = nmap.PortScanner()  # defines port scanner function
-            # print "[*] scanning for open admin ports..."
-            # unique class identifier
             print "[*] checking for open admin ports..."
-            nmap_args = '-iL' + target_list + '-p' + str(ports_list)
-            scanner.scan(arguments=nmap_args)  # Nmap scan command
+            scanner.scan(hosts=target_list, arguments=str(ports_list))  # Nmap scan command
+            print scanner.command_line()
             hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
             for host in hosts_list:
                 ports = scanner[host]['tcp'].keys()  # retrieves tcp port results from scan
