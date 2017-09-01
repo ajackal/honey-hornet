@@ -531,30 +531,30 @@ def main():
         exit(0)
     else:
         if ifile is not None:  # checks if input is a file
-            target_list = ifile
+            target_hosts = ifile
             iL = True  # iL is the switch for NMAP to read from file
             # Calculates total hosts to generate statistics
-            with open(target_list, 'r') as f:
-                total_hosts = f.readlines()
+            with open(target_hosts, 'r') as f:
+                target_hosts = f.readlines()
                 global total
-                total = len(total_hosts)
+                total = len(target_hosts)
         else:
-            target_list = cidr
+            target_hosts = cidr
             iL = False
         try:
             if scans == '1':
-                # hh.find_live_hosts(target_list, iL)  # Uses NMAP ping scan to check for live hosts
+                # hh.find_live_hosts(target_hosts, iL)  # Uses NMAP ping scan to check for live hosts
                 # hh.run_admin_scanner(ports)  # Checks for open admin ports, defined in file
-                hh.check_admin_ports(target_list, ports)
+                hh.check_admin_ports(target_hosts, ports)
             elif scans == '2':
-                # hh.find_live_hosts(target_list, iL)
-                hh.check_admin_ports(target_list, ports)
+                # hh.find_live_hosts(target_hosts, iL)
+                hh.check_admin_ports(target_hosts, ports)
                 hosts_to_check = hh.vulnerable_hosts
                 CheckCredentials().run_credential_test(hosts_to_check, ufile, pfile)
             elif scans == '3':
-                # hh.find_live_hosts(target_list, iL)
+                # hh.find_live_hosts(target_hosts, iL)
                 # hh.run_admin_scanner(ports)
-                hh.check_admin_ports(target_list, ports)
+                hh.check_admin_ports(target_hosts, ports)
                 hosts_to_check = hh.vulnerable_hosts
                 CheckCredentials().run_credential_test(hosts_to_check, ufile, pfile)
             else:
