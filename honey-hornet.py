@@ -81,7 +81,7 @@ class HoneyHornet:
             if iL is False:
                 scanner.scan(hosts=target_list, arguments='-sn')  # ping scan to check for live hosts
             else:
-                scanner.scan(arguments='-sn -iL ' + target_list)
+                scanner.scan(arguments='-sn -iL ' + str(target_list))
             hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
             # prints the hosts that are alive
             for host, status in hosts_list:
@@ -99,7 +99,7 @@ class HoneyHornet:
         except Exception as error:
             self.log_error(error)
 
-    def check_admin_ports(self, target_list, ports_list):
+    def check_admin_ports(self, target_list, ports_to_scan):
         """Scans a live_host for any open common admin ports.
         If an open port is found, it instantiates a class for that host
         and records all the open ports
@@ -111,10 +111,13 @@ class HoneyHornet:
             # self.CONNECTION_LOCK.acquire()
             scanner = nmap.PortScanner()  # defines port scanner function
             print "[*] checking for open admin ports..."
-            scanner.scan(hosts=target_list, arguments=str(ports_list))  # Nmap scan command
+            nmap_args = '-iL ' + str(target_list) + ' -p ' + str(ports_to_scan).strip('[ ]')
+            targets = str(target_list).strip('[]')
+            scanner.scan(arguments=nmap_args)  # Nmap scan command
             print scanner.command_line()
             hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
-            for host in hosts_list:
+            for host, status in hosts_list:
+                print host
                 ports = scanner[host]['tcp'].keys()  # retrieves tcp port results from scan
                 if ports:
                     ports.sort()  # sorts ports
@@ -128,6 +131,7 @@ class HoneyHornet:
                             new_host.add_vulnerable_port(port)
                             self.log_open_port(host, port, port_state)
         except Exception as error:
+            raise
             self.log_error(error)
         # finally:
         #     self.CONNECTION_LOCK.release()
@@ -534,10 +538,12 @@ def main():
             target_hosts = ifile
             iL = True  # iL is the switch for NMAP to read from file
             # Calculates total hosts to generate statistics
-            with open(target_hosts, 'r') as f:
-                target_hosts = f.readlines()
-                global total
-                total = len(target_hosts)
+            # with open(target_hosts, 'r') as f:
+            #     target_hosts = f.read().splitlines()
+            #     global total
+            #     total = len(target_hosts)
+            with open(ports, 'r') as f:
+                ports_to_scan = f.read().splitlines()
         else:
             target_hosts = cidr
             iL = False
@@ -545,16 +551,16 @@ def main():
             if scans == '1':
                 # hh.find_live_hosts(target_hosts, iL)  # Uses NMAP ping scan to check for live hosts
                 # hh.run_admin_scanner(ports)  # Checks for open admin ports, defined in file
-                hh.check_admin_ports(target_hosts, ports)
+                hh.check_admin_ports(target_hosts, ports_to_scan)
             elif scans == '2':
                 # hh.find_live_hosts(target_hosts, iL)
-                hh.check_admin_ports(target_hosts, ports)
+                hh.check_admin_ports(target_hosts, ports_to_scan)
                 hosts_to_check = hh.vulnerable_hosts
                 CheckCredentials().run_credential_test(hosts_to_check, ufile, pfile)
             elif scans == '3':
                 # hh.find_live_hosts(target_hosts, iL)
                 # hh.run_admin_scanner(ports)
-                hh.check_admin_ports(target_hosts, ports)
+                hh.check_admin_ports(target_hosts, ports_to_scan)
                 hosts_to_check = hh.vulnerable_hosts
                 CheckCredentials().run_credential_test(hosts_to_check, ufile, pfile)
             else:
@@ -564,6 +570,7 @@ def main():
         except KeyboardInterrupt:
             exit(0)
         except Exception as error:
+            raise
             hh.log_error(error)
         finally:
             print datetime.now() - start_time  # Calculates run time for the program.
