@@ -70,7 +70,7 @@ class HoneyHornet:
             ports_list = [int(x) for x in ports_file.read().split()]
             return ports_list
 
-    def find_live_hosts(self, addrs, iL):
+    def find_live_hosts(self, target_list, iL):
         """ Function scans the list or CIDR block to see which hosts are alive
         writes the live hosts to the 'live_hosts' list
         also calculates the percentage of how many hosts are alive
@@ -79,9 +79,9 @@ class HoneyHornet:
         try:
             scanner = nmap.PortScanner()
             if iL is False:
-                scanner.scan(hosts=addrs, arguments='-sn')  # ping scan to check for live hosts
+                scanner.scan(hosts=target_list, arguments='-sn')  # ping scan to check for live hosts
             else:
-                scanner.scan(arguments='-sn -iL ' + addrs)
+                scanner.scan(arguments='-sn -iL ' + target_list)
             hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
             # prints the hosts that are alive
             for host, status in hosts_list:
@@ -99,7 +99,7 @@ class HoneyHornet:
         except Exception as error:
             self.log_error(error)
 
-    def check_admin_ports(self, live_host, ports_list):
+    def check_admin_ports(self, target_list, ports_list):
         """Scans a live_host for any open common admin ports.
         If an open port is found, it instantiates a class for that host
         and records all the open ports
@@ -109,32 +109,27 @@ class HoneyHornet:
         # let Nmap do the threading...
         try:
             # self.CONNECTION_LOCK.acquire()
-            host = live_host
+            # host = live_host
             scanner = nmap.PortScanner()  # defines port scanner function
             # print "[*] scanning for open admin ports..."
-            counter = len(self.vulnerable_hosts) + 1
-            host_id = 'a' + str(counter)  # unique class identifier
-            print "[*] checking {0} for open admin ports...".format(host)
-            scanner.scan(host, str(ports_list))  # Nmap scan command
-            ports = scanner[host]['tcp'].keys()  # retrieves tcp port results from scan
-            ports.sort()  # sorts ports
-            counter2 = 0
-            for port in ports:
-                sop = scanner[host]['tcp'][port]['state']  # defines port state variable
-                if sop == 'open':  # checks to see if status is open
-                    if host_id not in self.vulnerable_hosts:  # checks to see if host already has an object
-                        new_host = VulnerableHost(host)  # creates new object
-                        self.vulnerable_hosts.append(new_host)  # appends vulnerable host to list
-                    new_host.add_vulnerable_port(port)
-                    # host_id.add_vulnerable_port(port)
-                    # print '[+] port : %s >> %s' % (colored(port, 'yellow'), colored(sop, 'green'))
-                    self.log_open_port(host, port, sop)
-                    # return True
-                else:
-                    counter2 += 1
-                if counter2 == len(ports):
-                    print '[!] No open ports found.'
-                    return False
+            # unique class identifier
+            print "[*] checking for open admin ports..."
+            nmap_args = '-iL' + target_list + '-p' + str(ports_list)
+            scanner.scan(arguments=nmap_args)  # Nmap scan command
+            hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
+            for host in hosts_list:
+                ports = scanner[host]['tcp'].keys()  # retrieves tcp port results from scan
+                if ports:
+                    ports.sort()  # sorts ports
+                    # counter = len(self.vulnerable_hosts) + 1
+                    # host_id = 'a' + str(counter)
+                    new_host = VulnerableHost(host)  # creates new object
+                    self.vulnerable_hosts.append(new_host)
+                    for port in ports:
+                        port_state = scanner[host]['tcp'][port]['state']  # defines port state variable
+                        if port_state == 'open':  # checks to see if status is open
+                            new_host.add_vulnerable_port(port)
+                            self.log_open_port(host, port, port_state)
         except Exception as error:
             self.log_error(error)
         # finally:
@@ -539,27 +534,30 @@ def main():
         exit(0)
     else:
         if ifile is not None:  # checks if input is a file
-            addrs = ifile
+            target_list = ifile
             iL = True  # iL is the switch for NMAP to read from file
             # Calculates total hosts to generate statistics
-            with open(addrs, 'r') as f:
+            with open(target_list, 'r') as f:
                 total_hosts = f.readlines()
                 global total
                 total = len(total_hosts)
         else:
-            addrs = cidr
+            target_list = cidr
             iL = False
         try:
             if scans == '1':
-                hh.find_live_hosts(addrs, iL)  # Uses NMAP ping scan to check for live hosts
-                hh.run_admin_scanner(ports)  # Checks for open admin ports, defined in file
+                # hh.find_live_hosts(target_list, iL)  # Uses NMAP ping scan to check for live hosts
+                # hh.run_admin_scanner(ports)  # Checks for open admin ports, defined in file
+                hh.check_admin_ports(target_list, ports)
             elif scans == '2':
-                hh.find_live_hosts(addrs, iL)
+                # hh.find_live_hosts(target_list, iL)
+                hh.check_admin_ports(target_list, ports)
                 hosts_to_check = hh.vulnerable_hosts
                 CheckCredentials().run_credential_test(hosts_to_check, ufile, pfile)
             elif scans == '3':
-                hh.find_live_hosts(addrs, iL)
-                hh.run_admin_scanner(ports)
+                # hh.find_live_hosts(target_list, iL)
+                # hh.run_admin_scanner(ports)
+                hh.check_admin_ports(target_list, ports)
                 hosts_to_check = hh.vulnerable_hosts
                 CheckCredentials().run_credential_test(hosts_to_check, ufile, pfile)
             else:
