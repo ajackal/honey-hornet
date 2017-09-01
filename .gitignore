@@ -1,3 +1,4 @@
 # ignore all log files created locally
 *.log
 *.txt
+*.bak

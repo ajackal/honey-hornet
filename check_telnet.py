@@ -37,12 +37,14 @@ def check_telnet(host, port, user, password):
         t.write(password + "\r\n")
         time.sleep(TIMER_DELAY)
         server_response = t.read_very_eager()
+        with open('server_response.log', 'a') as log_file:
+            log_file.write(host + "\n" + server_response + "\n")
         # print server_response
         if "OK" in server_response:
             protocol = "telnet"
             log_results(host, port, user, password, protocol)
             t.close()
-        elif "incorrect" in server_resposne:
+        elif "incorrect" in server_response:
             log_error("Password incorrect.")
             t.close()
         else:
@@ -80,7 +82,7 @@ def main():
     parser.add_option('-i', dest='ifile', type='string', help='import IP addresses from file, cannot be used with -c')
     parser.add_option('-u', dest='user', type='string', help='imports users from file; else: uses default list')
     parser.add_option('-p', dest='password', type='string', help='imports passwords from file; else: uses default list')
-    parser.add_option('-o', dest='port', type='string', help='import ports from file')
+    parser.add_option('-o', dest='port', type='string', help='telnet port to check credentials')
 
     (options, args) = parser.parse_args()
     ifile = options.ifile
@@ -93,6 +95,8 @@ def main():
     try:
         for host in vulnerable_hosts:
             check_telnet(host, port, user, password)
+    except KeyboardInterrupt:
+        exit(0)
     except Exception:
         raise
     finally:

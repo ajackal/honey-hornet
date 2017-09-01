@@ -105,11 +105,13 @@ class HoneyHornet:
         and records all the open ports
         Tests all live host for open 'admin' ports
         """
+        # TODO: use iL (input list) mode for admin scan like in live_hosts,
+        # let Nmap do the threading...
         try:
-            self.CONNECTION_LOCK.acquire()
+            # self.CONNECTION_LOCK.acquire()
             host = live_host
             scanner = nmap.PortScanner()  # defines port scanner function
-            print "[*] scanning for open admin ports..."
+            # print "[*] scanning for open admin ports..."
             counter = len(self.vulnerable_hosts) + 1
             host_id = 'a' + str(counter)  # unique class identifier
             print "[*] checking {0} for open admin ports...".format(host)
@@ -124,9 +126,10 @@ class HoneyHornet:
                         new_host = VulnerableHost(host)  # creates new object
                         self.vulnerable_hosts.append(new_host)  # appends vulnerable host to list
                     new_host.add_vulnerable_port(port)
+                    # host_id.add_vulnerable_port(port)
                     # print '[+] port : %s >> %s' % (colored(port, 'yellow'), colored(sop, 'green'))
                     self.log_open_port(host, port, sop)
-                    return True
+                    # return True
                 else:
                     counter2 += 1
                 if counter2 == len(ports):
@@ -134,24 +137,27 @@ class HoneyHornet:
                     return False
         except Exception as error:
             self.log_error(error)
-        finally:
-            self.CONNECTION_LOCK.release()
+        # finally:
+        #     self.CONNECTION_LOCK.release()
 
     def run_admin_scanner(self, ports):
         """ Function scans for common admin ports that might be open;
         Starts a thread for each host dramatically speeding up the scan
         """
-        threads = []
+        # threads = []
         ports_list = self.build_ports_list(ports)
         print "[*] scanning for open admin ports..."
         try:
             for live_host in self.live_hosts:
-                new_thread = threading.Thread(target=self.check_admin_ports, args=(live_host, ports_list))
-                threads.append(new_thread)
-            for thread in threads:
-                thread.start()
-            for thread in threads:
-                thread.join()
+                self.check_admin_ports(live_host, ports_list)
+            #     new_thread = threading.Thread(target=self.check_admin_ports, args=(live_host, ports_list))
+            #     threads.append(new_thread)
+            # for thread in threads:
+            #     thread.start()
+            # for thread in threads:
+            #     thread.join()
+        except KeyboardInterrupt:
+            exit(0)
         except Exception as error:
             self.log_error(error)
 
@@ -486,6 +492,8 @@ class CheckCredentials(VulnerableHost):
                 thread.start()
             for thread in threads:
                 thread.join()
+        except KeyboardInterrupt:
+            exit(0)
         except Exception as error:
             self.log_error(error)
 
@@ -558,6 +566,8 @@ def main():
                 print "[!] Please define a scan type!"
                 print parser.usage
                 exit(0)
+        except KeyboardInterrupt:
+            exit(0)
         except Exception as error:
             hh.log_error(error)
         finally:
