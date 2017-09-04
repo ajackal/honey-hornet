@@ -2,7 +2,7 @@
 
 set user [lindex $argv 0]
 set password [lindex $argv 1]
-set f [open "hosts.txt"]
+set f [open "targets.txt"]
 set hosts [split [read $f] "\n"]
 close $f
 

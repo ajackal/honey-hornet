@@ -13,6 +13,7 @@ from pexpect import pxssh
 import nmap
 import time
 import itertools
+import yaml
 
 
 class HoneyHornet:
@@ -27,6 +28,10 @@ class HoneyHornet:
         self.users = []
         self.passwords = []
         self.banner = False
+        with open('config.yml', 'r') as cfg_file:
+            self.config = yaml.load(cfg_file)
+            # print self.config
+            # print self.config['users']
 
     def add_banner_grab(self, banner):
         if banner == '1':
@@ -37,7 +42,8 @@ class HoneyHornet:
     def log_open_port(self, host, port, status):
         """ Logs any host with an open port to a file. """
         time_now = datetime.now()
-        event = " host='{0}', port={1}, status='{2}'\n".format(host, port, status)
+        event = " host={0}, port={1}, status='{2}'\n".format(colored(host, 'red'), colored(port, 'red'),
+                                                               colored(status, 'green'))
         print "[*] Open port found:{0}".format(event)
         with open("open_ports.log", 'a') as log_file:
             log_file.write(str(time_now))
@@ -47,7 +53,7 @@ class HoneyHornet:
         """ Logs credentials that are successfully recovered. """
         time_now = str(datetime.now())
         print "[*] Recording successful attempt:"
-        event = " host='{0}', port={1}, user='{2}', password='{3}', protocol='{4}'\n".format(host, port, user, password,
+        event = " host={0}, port={1}, user='{2}', password='{3}', protocol='{4}'\n".format(host, port, user, password,
                                                                                              protocol)
         print "[*] Password recovered:{0}".format(event)
         with open("recovered_passwords.log", 'a') as log_file:
@@ -62,67 +68,68 @@ class HoneyHornet:
             f.write(log_error_message)
             print "[*] Error logged: {0}".format(error)
 
-    def build_ports_list(self, ports):
-        """ Reads a file to build a list of ports to scan. """
-        if ports is None:
-            ports = "ports.txt"
-        with open(ports, 'r') as ports_file:
-            ports_list = [int(x) for x in ports_file.read().split()]
-            return ports_list
+    # TODO: Deprecated, delete.
+    # def build_ports_list(self, ports):
+    #     """ Reads a file to build a list of ports to scan. """
+    #     if ports is None:
+    #         ports = "ports.txt"
+    #     with open(ports, 'r') as ports_file:
+    #         ports_list = [int(x) for x in ports_file.read().split()]
+    #         return ports_list
 
-    def find_live_hosts(self, target_list, iL):
-        """ Function scans the list or CIDR block to see which hosts are alive
-        writes the live hosts to the 'live_hosts' list
-        also calculates the percentage of how many hosts are alive
-        """
-        print "[*] scanning for live hosts..."
-        try:
-            scanner = nmap.PortScanner()
-            if iL is False:
-                scanner.scan(hosts=target_list, arguments='-sn')  # ping scan to check for live hosts
-            else:
-                scanner.scan(arguments='-sn -iL ' + str(target_list))
-            hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
-            # prints the hosts that are alive
-            for host, status in hosts_list:
-                print '[+] {0} is {1}'.format(colored(host, 'yellow'), colored(status, 'green'))
-                self.live_hosts.append(host)  # adds live hosts to list to scan for open admin ports
-            if iL is True:
-                live = len(self.live_hosts)
-                percentage = 100 * (float(live) / float(total))
-                print "[+] {0} out of {1} hosts are alive or {2}%".format(live, total, percentage)
-                with open("open_ports.log", 'a') as log_file:
-                    new_log = "##############  NEW SCAN  ##############\n"
-                    log_file.write(new_log)
-                    log_totals = "{0}\{1} = {2}%\n".format(live, total, percentage)
-                    log_file.write(log_totals)
-        except Exception as error:
-            self.log_error(error)
+    # TODO: Deprecated, delete.
+    # def find_live_hosts(self, target_list, iL):
+    #     """ Function scans the list or CIDR block to see which hosts are alive
+    #     writes the live hosts to the 'live_hosts' list
+    #     also calculates the percentage of how many hosts are alive
+    #     """
+    #     print "[*] scanning for live hosts..."
+    #     try:
+    #         scanner = nmap.PortScanner()
+    #         if iL is False:
+    #             scanner.scan(hosts=target_list, arguments='-sn')  # ping scan to check for live hosts
+    #         else:
+    #             scanner.scan(arguments='-sn -iL ' + str(target_list))
+    #         hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
+    #         # prints the hosts that are alive
+    #         for host, status in hosts_list:
+    #             print '[+] {0} is {1}'.format(colored(host, 'yellow'), colored(status, 'green'))
+    #             self.live_hosts.append(host)  # adds live hosts to list to scan for open admin ports
+    #         if iL is True:
+    #             live = len(self.live_hosts)
+    #             percentage = 100 * (float(live) / float(total))
+    #             print "[+] {0} out of {1} hosts are alive or {2}%".format(live, total, percentage)
+    #             with open("open_ports.log", 'a') as log_file:
+    #                 new_log = "##############  NEW SCAN  ##############\n"
+    #                 log_file.write(new_log)
+    #                 log_totals = "{0}\{1} = {2}%\n".format(live, total, percentage)
+    #                 log_file.write(log_totals)
+    #     except Exception as error:
+    #         self.log_error(error)
 
     def check_admin_ports(self, target_list, ports_to_scan):
         """Scans a live_host for any open common admin ports.
         If an open port is found, it instantiates a class for that host
         and records all the open ports
         Tests all live host for open 'admin' ports
+
+        Changed to let Nmap handling the threading.
+        Had implemented threading, but threading Nmap, which is threaded seems to add huge complications.
+        New implementation is very fast and almost no issues.
+        Ports list as argument needed to have the whitespace stripped between each port.
         """
-        # TODO: use iL (input list) mode for admin scan like in live_hosts,
-        # let Nmap do the threading...
+        # TODO: Add up percentage like in live hosts above.
         try:
-            # self.CONNECTION_LOCK.acquire()
             scanner = nmap.PortScanner()  # defines port scanner function
             print "[*] checking for open admin ports..."
-            nmap_args = '-iL ' + str(target_list) + ' -p ' + str(ports_to_scan).strip('[ ]')
-            targets = str(target_list).strip('[]')
-            scanner.scan(arguments=nmap_args)  # Nmap scan command
-            print scanner.command_line()
+            targets = '-iL ' + str(target_list).strip('[]')
+            ports = ' -p ' + str(ports_to_scan).strip('[]').replace(' ', '')
+            scanner.scan(hosts=targets, arguments=ports)  # Nmap scan command
             hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
             for host, status in hosts_list:
-                print host
                 ports = scanner[host]['tcp'].keys()  # retrieves tcp port results from scan
                 if ports:
                     ports.sort()  # sorts ports
-                    # counter = len(self.vulnerable_hosts) + 1
-                    # host_id = 'a' + str(counter)
                     new_host = VulnerableHost(host)  # creates new object
                     self.vulnerable_hosts.append(new_host)
                     for port in ports:
@@ -131,31 +138,29 @@ class HoneyHornet:
                             new_host.add_vulnerable_port(port)
                             self.log_open_port(host, port, port_state)
         except Exception as error:
-            raise
             self.log_error(error)
-        # finally:
-        #     self.CONNECTION_LOCK.release()
 
-    def run_admin_scanner(self, ports):
-        """ Function scans for common admin ports that might be open;
-        Starts a thread for each host dramatically speeding up the scan
-        """
-        # threads = []
-        ports_list = self.build_ports_list(ports)
-        print "[*] scanning for open admin ports..."
-        try:
-            for live_host in self.live_hosts:
-                self.check_admin_ports(live_host, ports_list)
-            #     new_thread = threading.Thread(target=self.check_admin_ports, args=(live_host, ports_list))
-            #     threads.append(new_thread)
-            # for thread in threads:
-            #     thread.start()
-            # for thread in threads:
-            #     thread.join()
-        except KeyboardInterrupt:
-            exit(0)
-        except Exception as error:
-            self.log_error(error)
+    # TODO: Deprecated, delete.
+    # def run_admin_scanner(self, ports):
+    #     """ Function scans for common admin ports that might be open;
+    #     Starts a thread for each host dramatically speeding up the scan
+    #     """
+    #     threads = []
+    #     ports_list = self.build_ports_list(ports)
+    #     print "[*] scanning for open admin ports..."
+    #     try:
+    #         for live_host in self.live_hosts:
+    #             self.check_admin_ports(live_host, ports_list)
+    #             new_thread = threading.Thread(target=self.check_admin_ports, args=(live_host, ports_list))
+    #             threads.append(new_thread)
+    #         for thread in threads:
+    #             thread.start()
+    #         for thread in threads:
+    #             thread.join()
+    #     except KeyboardInterrupt:
+    #         exit(0)
+    #     except Exception as error:
+    #         self.log_error(error)
 
 
 class VulnerableHost(HoneyHornet):
@@ -218,25 +223,27 @@ class CheckCredentials(VulnerableHost):
         self.http_ports = [8000, 8080, 8081, 8090, 9191, 9443]
         self.telnet_ports = [23, 2332]
 
-    def build_credentials(self, user_file, password_file):
+    def build_credentials(self):
         """ Function parses either the default files or user input files
         into the appropriate lists to run the program
         """
-        file_list = [user_file, password_file]
+        # file_list = [user_file, password_file]
         # TODO: finish fixing credentials using the list(itertools()) for user input
         try:
-            for thing in file_list:
-                if thing is not None:
-                    with open(thing, 'r') as input_file:
-                        if thing is user_file:
-                            users = input_file.read().splitlines()
-                        elif thing is password_file:
-                            passwords = input_file.read().splitlines()
-                else:
-                    with open('users.txt', 'r') as user_file:
-                        users = user_file.read().splitlines()
-                    with open('passwords.txt', 'r') as password_file:
-                        passwords = password_file.read().splitlines()
+            # for thing in file_list:
+            #     if thing is not None:
+            #         with open(thing, 'r') as input_file:
+            #             if thing is user_file:
+            #                 users = input_file.read().splitlines()
+            #             elif thing is password_file:
+            #                 passwords = input_file.read().splitlines()
+            #     else:
+            #         with open('users.txt', 'r') as user_file:
+            #             users = user_file.read().splitlines()
+            #         with open('passwords.txt', 'r') as password_file:
+            #             passwords = password_file.read().splitlines()
+            users = self.config['users']
+            passwords = self.config['passwords']
             credentials = list(itertools.product(users, passwords))
             return credentials
         except Exception as error:
@@ -459,7 +466,7 @@ class CheckCredentials(VulnerableHost):
         """ Function tests hosts for default credentials on open 'admin' ports
         Utilizes threading to greatly speed up the scanning
         """
-        credentials_to_check = self.build_credentials(ufile, pfile)
+        credentials_to_check = self.build_credentials()
         threads = []
         print "[*] Testing vulnerable host ip addresses..."
         try:
@@ -497,83 +504,41 @@ class CheckCredentials(VulnerableHost):
 def main():
     """ Main program """
     start_time = datetime.now()
-    # TODO: upgrade to ArgParser
     # TODO: add resume option (read from file)
-    parser = optparse.OptionParser('usage: %prog <scan type> <targets> <options>')
-    parser.add_option('-i', dest='ifile', type='string', help='import IP addresses from file, cannot be used with -c')
-    parser.add_option('-c', dest='cidr', type='string', help='cidr block or localhost, cannot be used with -i')
-    parser.add_option('-u', dest='ufile', type='string', help='imports users from file; else: uses default list')
-    parser.add_option('-p', dest='pfile', type='string', help='imports passwords from file; else: uses default list')
-    parser.add_option('-a', dest='ports', type='string', help='import ports from file')
-    parser.add_option('-s', dest='scans', type='string', help='scan types to use, 1=port scan 2=credential scan 3=both')
-    parser.add_option('-b', dest='banner', type='string', help='grab banner? 0=no(default) 1=yes')
-
-    (options, args) = parser.parse_args()
-    ifile = options.ifile
-    cidr = options.cidr
-    ufile = options.ufile
-    pfile = options.pfile
-    ports = options.ports
-    scans = options.scans
-    banner = options.banner
 
     hh = HoneyHornet()
-    # Reads users, passwords, and ports files to generate lists to test.
-    # hh.inputs(ufile, pfile, ports)
 
-    if banner is not None:
-        hh.add_banner_grab(banner)
+    # if banner is not None:
+    #     hh.add_banner_grab(banner)
 
-    # Validates the input options.
-    if ifile is not None and cidr is not None:
-        print "[!] Cannot have two input options!"
-        print parser.usage
-        exit(0)
-    elif ifile is None and cidr is None:
-        print "[!] Must define something to scan!"
-        print parser.usage
-        exit(0)
-    else:
-        if ifile is not None:  # checks if input is a file
-            target_hosts = ifile
-            iL = True  # iL is the switch for NMAP to read from file
-            # Calculates total hosts to generate statistics
-            # with open(target_hosts, 'r') as f:
-            #     target_hosts = f.read().splitlines()
-            #     global total
-            #     total = len(target_hosts)
-            with open(ports, 'r') as f:
-                ports_to_scan = f.read().splitlines()
+    target_hosts = hh.config['targets']
+    ports_to_scan = hh.config['ports']
+    scan_type = str(hh.config['scanType']).strip('['']')
+
+    try:
+        if scan_type == '1':
+            print "[*] Running in port scanner mode..."
+            hh.check_admin_ports(target_hosts, ports_to_scan)
+        elif scan_type == '2':
+            print "[*] Running in credential check mode..."
+            hh.check_admin_ports(target_hosts, ports_to_scan)
+            hosts_to_check = hh.vulnerable_hosts
+            CheckCredentials().run_credential_test(hosts_to_check)
+        # elif scan_type == 3:
+        #     hh.find_live_hosts(target_hosts, iL)
+        #     hh.run_admin_scanner(ports)
+        #     hh.check_admin_ports(target_hosts, ports_to_scan)
+        #     hosts_to_check = hh.vulnerable_hosts
+        #     CheckCredentials().run_credential_test(hosts_to_check, ufile, pfile)
         else:
-            target_hosts = cidr
-            iL = False
-        try:
-            if scans == '1':
-                # hh.find_live_hosts(target_hosts, iL)  # Uses NMAP ping scan to check for live hosts
-                # hh.run_admin_scanner(ports)  # Checks for open admin ports, defined in file
-                hh.check_admin_ports(target_hosts, ports_to_scan)
-            elif scans == '2':
-                # hh.find_live_hosts(target_hosts, iL)
-                hh.check_admin_ports(target_hosts, ports_to_scan)
-                hosts_to_check = hh.vulnerable_hosts
-                CheckCredentials().run_credential_test(hosts_to_check, ufile, pfile)
-            elif scans == '3':
-                # hh.find_live_hosts(target_hosts, iL)
-                # hh.run_admin_scanner(ports)
-                hh.check_admin_ports(target_hosts, ports_to_scan)
-                hosts_to_check = hh.vulnerable_hosts
-                CheckCredentials().run_credential_test(hosts_to_check, ufile, pfile)
-            else:
-                print "[!] Please define a scan type!"
-                print parser.usage
-                exit(0)
-        except KeyboardInterrupt:
+            print "[!] Please define a scan type!"
             exit(0)
-        except Exception as error:
-            raise
-            hh.log_error(error)
-        finally:
-            print datetime.now() - start_time  # Calculates run time for the program.
+    except KeyboardInterrupt:
+        exit(0)
+    except Exception as error:
+        hh.log_error(error)
+    finally:
+        print datetime.now() - start_time  # Calculates run time for the program.
 
 
 if __name__ == "__main__":
