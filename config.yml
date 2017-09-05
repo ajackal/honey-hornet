@@ -3,8 +3,11 @@
 # Defines the type of scan to run.
 # Uncomment one option only.
 scanType:
-  - 1  # Port Scan
-  # - 2  # Check Credentials
+  # - 1  # Port Scan
+  - 2  # Check Credentials
+
+# Uncomment to do banner grabs on HTTP ports.
+bannerGrab: False
 
 # Ports to scan on each target.
 ports:

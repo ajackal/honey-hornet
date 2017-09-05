@@ -2,9 +2,8 @@
 
 import telnetlib
 from ftplib import FTP
-import optparse
 import threading
-from threading import Thread, BoundedSemaphore
+from threading import BoundedSemaphore
 from datetime import datetime
 import httplib
 import re
@@ -30,14 +29,9 @@ class HoneyHornet:
         self.banner = False
         with open('config.yml', 'r') as cfg_file:
             self.config = yaml.load(cfg_file)
-            # print self.config
-            # print self.config['users']
 
     def add_banner_grab(self, banner):
-        if banner == '1':
-            self.banner = True
-        else:
-            self.banner = False
+        self.banner = banner
 
     def log_open_port(self, host, port, status):
         """ Logs any host with an open port to a file. """
@@ -54,12 +48,13 @@ class HoneyHornet:
         time_now = str(datetime.now())
         print "[*] Recording successful attempt:"
         event = " host={0}, port={1}, user='{2}', password='{3}', protocol='{4}'\n".format(host, port, user, password,
-                                                                                             protocol)
+                                                                                           protocol)
         print "[*] Password recovered:{0}".format(event)
         with open("recovered_passwords.log", 'a') as log_file:
             log_file.write(time_now)
             log_file.write(event)
 
+    # TODO: have two error logging methods: 1. for service errors (e.g. SSH) and one for build errors
     def log_error(self, error):
         """ Logs any Exception or error that is thrown by the program. """
         time_now = datetime.now()
@@ -67,15 +62,6 @@ class HoneyHornet:
         with open('error.log', 'a') as f:
             f.write(log_error_message)
             print "[*] Error logged: {0}".format(error)
-
-    # TODO: Deprecated, delete.
-    # def build_ports_list(self, ports):
-    #     """ Reads a file to build a list of ports to scan. """
-    #     if ports is None:
-    #         ports = "ports.txt"
-    #     with open(ports, 'r') as ports_file:
-    #         ports_list = [int(x) for x in ports_file.read().split()]
-    #         return ports_list
 
     # TODO: Deprecated, delete.
     # def find_live_hosts(self, target_list, iL):
@@ -140,28 +126,6 @@ class HoneyHornet:
         except Exception as error:
             self.log_error(error)
 
-    # TODO: Deprecated, delete.
-    # def run_admin_scanner(self, ports):
-    #     """ Function scans for common admin ports that might be open;
-    #     Starts a thread for each host dramatically speeding up the scan
-    #     """
-    #     threads = []
-    #     ports_list = self.build_ports_list(ports)
-    #     print "[*] scanning for open admin ports..."
-    #     try:
-    #         for live_host in self.live_hosts:
-    #             self.check_admin_ports(live_host, ports_list)
-    #             new_thread = threading.Thread(target=self.check_admin_ports, args=(live_host, ports_list))
-    #             threads.append(new_thread)
-    #         for thread in threads:
-    #             thread.start()
-    #         for thread in threads:
-    #             thread.join()
-    #     except KeyboardInterrupt:
-    #         exit(0)
-    #     except Exception as error:
-    #         self.log_error(error)
-
 
 class VulnerableHost(HoneyHornet):
     """ defines a class for each live host with an open admin port
@@ -195,13 +159,19 @@ class VulnerableHost(HoneyHornet):
             log_file.write(time_now)
             log_file.write(event)
 
-    def log_error(self, error):
+    def log_service_error(self, host, port, service, error):
         """ Logs any Exception or error that is thrown by the program. """
+        input_validation = [host, port, service]
+        for item in input_validation:
+            if item is None:
+                item += ""
+
         time_now = datetime.now()
-        log_error_message = str(time_now) + ":" + str(error) + "\n"
+        log_error_message = str(time_now) + " host={0}, port={1}, service={2}, error={3}\n".format(host, port, service,
+                                                                                                   str(error))
         with open('error.log', 'a') as f:
             f.write(log_error_message)
-            print "[*] Error logged: {0}".format(error)
+            print "[*] Error logged: {0}".format(log_error_message)
 
     def add_vulnerable_port(self, port):
         """ function adds open admin port to list """
@@ -247,7 +217,10 @@ class CheckCredentials(VulnerableHost):
             credentials = list(itertools.product(users, passwords))
             return credentials
         except Exception as error:
-            self.log_error(error)
+            host = ""
+            port = ""
+            service = "build_credentials"
+            self.log_service_error(host, port, service, error)
             return False
 
     def check_telnet(self, vulnerable_host, port, credentials):
@@ -266,8 +239,9 @@ class CheckCredentials(VulnerableHost):
         """
         try:
             self.CONNECTION_LOCK.acquire()
+            service = "TELNET"
+            host = vulnerable_host.ip
             for credential in credentials:
-                host = vulnerable_host.ip
                 user = credential[0]
                 password = credential[1]
                 print "[*] Testing Telnet connection on {0}...".format(host)
@@ -286,14 +260,15 @@ class CheckCredentials(VulnerableHost):
                     t.close()
                     return True
                 elif "incorrect" in server_response:
-                    self.log_error("Password incorrect.")
+                    error = "Password incorrect."
+                    self.log_service_error(host, port, service, error)
                     t.close()
                     return False
                 else:
                     t.close()
                     return False
         except Exception as error:
-            self.log_error(error)
+            self.log_service_error(host, port, service, error)
             return False
         finally:
             self.CONNECTION_LOCK.release()
@@ -316,7 +291,7 @@ class CheckCredentials(VulnerableHost):
             print "[+] FTP server responded with {0}".format(ftp_welcome)
             return True
         except Exception as error:
-            self.log_error(error)
+            self.log_service_error(host, port, protocol, error)
             return False
         finally:
             self.CONNECTION_LOCK.release()
@@ -326,6 +301,8 @@ class CheckCredentials(VulnerableHost):
         try:
             self.CONNECTION_LOCK.acquire()
             host = vulnerable_host.ip
+            port = "21"
+            service = "FTP"
             for credential in credentials:
                 user = credential[0]
                 password = credential[1]
@@ -336,12 +313,10 @@ class CheckCredentials(VulnerableHost):
                     print "[*] FTP server returned {0}".format(ftp_welcome)
                     ftp_conn.login(user, password)
                     ftp_conn.close()
-                    port = "21"
-                    protocol = "FTP"
-                    self.log_results(host, port, user, password, protocol)
+                    self.log_results(host, port, user, password, service)
                 break
         except Exception as error:
-            self.log_error(error)
+            self.log_service_error(host, port, service, error)
         finally:
             self.CONNECTION_LOCK.release()
 
@@ -350,25 +325,33 @@ class CheckCredentials(VulnerableHost):
         try:
             self.CONNECTION_LOCK.acquire()
             host = vulnerable_host.ip
+            port = "22"
+            service = "SSH"
             print "[*] Testing SSH service on {0}...".format(host)
             for credential in credentials:
-                user = credential[0]
-                password = credential[1]
-                ssh_conn = pxssh.pxssh()
-                # ssh_conn = pxssh.pxssh(options={"StrictHostKeyChecking": "no", "-oHostKeyAlgorithms": "+ssh-dss"})
-                ssh_conn.login(host, user, password)
-                port = "22"
-                protocol = "SSH"
-                self.log_results(host, port, user, password, protocol)
-                ssh_conn.logout()
-                ssh_conn.close()
-        except pxssh.ExceptionPxssh as error:
-            self.log_error(error)
+                try:
+                    user = str(credential[0])
+                    password = str(credential[1])
+                    # This works for up-to-date SSH servers:
+                    # ssh_conn = pxssh.pxssh()
+                    # Old SSH servers running "ssh-dss" needs this option instead:
+                    ssh_conn = pxssh.pxssh(options={"StrictHostKeyChecking": "no", "HostKeyAlgorithms": "+ssh-dss"})
+                    ssh_conn.login(host, user, password)
+                    self.log_results(host, port, user, password, service)
+                    ssh_conn.logout()
+                    ssh_conn.close()
+                except pxssh.EOF as EOF_error:
+                    self.log_service_error(host, port, service, EOF_error)
+                except pxssh.ExceptionPxssh as error:
+                    self.log_service_error(host, port, service, error)
+        except threading.ThreadError as thread_error:
+            self.log_service_error(host, port, service, thread_error)
         finally:
             self.CONNECTION_LOCK.release()
 
     def banner_grab(self, vulnerable_host):
         """ simple banner grab with HTTPLIB """
+        service = "HTTP-BANNER-GRAB"
         try:
             self.CONNECTION_LOCK.acquire()
             host = vulnerable_host.ip
@@ -388,7 +371,7 @@ class CheckCredentials(VulnerableHost):
                                                                                                   headers, banner_txt)
                     banner_log.write(banner_to_log)
         except Exception as error:
-            self.log_error(error)
+            self.log_service_error(host, http_port, service, error)
         finally:
             self.CONNECTION_LOCK.release()
 
@@ -457,12 +440,11 @@ class CheckCredentials(VulnerableHost):
             error_msg = re.findall("message='(?P<error>.*)'", str(error))
             if error_msg:
                 error = error_msg[0]
-                error_msg = host, http_port, method, error
-                self.log_error(error_msg)
+                self.log_service_error(host, http_port, method, error)
         finally:
             self.CONNECTION_LOCK.release()
 
-    def run_credential_test(self, hosts_to_check, ufile, pfile):
+    def run_credential_test(self, hosts_to_check):
         """ Function tests hosts for default credentials on open 'admin' ports
         Utilizes threading to greatly speed up the scanning
         """
@@ -498,7 +480,10 @@ class CheckCredentials(VulnerableHost):
         except KeyboardInterrupt:
             exit(0)
         except Exception as error:
-            self.log_error(error)
+            host = ""
+            port = ""
+            service = ""
+            self.log_service_error(host, port, service, error)
 
 
 def main():
@@ -508,12 +493,13 @@ def main():
 
     hh = HoneyHornet()
 
-    # if banner is not None:
-    #     hh.add_banner_grab(banner)
-
+    print "[*] Using default YAML config file..."
     target_hosts = hh.config['targets']
     ports_to_scan = hh.config['ports']
     scan_type = str(hh.config['scanType']).strip('['']')
+    banner = hh.config['bannerGrab']
+    if banner is True:
+        hh.add_banner_grab(banner)
 
     try:
         if scan_type == '1':
@@ -524,12 +510,6 @@ def main():
             hh.check_admin_ports(target_hosts, ports_to_scan)
             hosts_to_check = hh.vulnerable_hosts
             CheckCredentials().run_credential_test(hosts_to_check)
-        # elif scan_type == 3:
-        #     hh.find_live_hosts(target_hosts, iL)
-        #     hh.run_admin_scanner(ports)
-        #     hh.check_admin_ports(target_hosts, ports_to_scan)
-        #     hosts_to_check = hh.vulnerable_hosts
-        #     CheckCredentials().run_credential_test(hosts_to_check, ufile, pfile)
         else:
             print "[!] Please define a scan type!"
             exit(0)
