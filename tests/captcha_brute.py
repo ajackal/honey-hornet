@@ -7,7 +7,7 @@ port = 80
 captcha_to_check = []
 
 # builds key list
-keys = ["&cb0=on", "&cb1=on &cb2=on", "&cb3=on", "&cb4=on", "&cb5=on"]
+keys = ["&cb0=on", "&cb1=on", "&cb2=on", "&cb3=on", "&cb4=on", "&cb5=on"]
 for i in range(len(keys) + 1):
     keys_list = combinations(keys, i)
     for i in keys_list:
