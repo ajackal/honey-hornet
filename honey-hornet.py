@@ -100,7 +100,7 @@ class HoneyHornet:
                                                                                                    str(error))
         with open('error.log', 'a') as f:
             f.write(log_error_message)
-            print "[*] Error logged: {0}".format(log_error_message)
+            print "[*] Error logged: {0}:{1} >> {2}".format(host, port, log_error_message)
 
     # TODO: Deprecated, delete.
     # def find_live_hosts(self, target_list, iL):
@@ -250,8 +250,8 @@ class CheckCredentials(VulnerableHost):
             for credential in credentials:
                 user = credential[0]
                 password = credential[1]
-                print "[*] Testing Telnet connection on {0}...".format(host)
                 if self.verbose:
+                    print "[*] Testing Telnet connection on {0}...".format(host)
                     print "[*] username: {0} password: {1} port: {2}".format(user, password, port)
                 t = telnetlib.Telnet(host, port, 15)
                 time.sleep(self.TIMER_DELAY)
@@ -263,8 +263,7 @@ class CheckCredentials(VulnerableHost):
                 if self.verbose:
                     print server_response
                 if "OK" in server_response:
-                    protocol = "telnet"
-                    self.log_results(host, port, user, password, protocol)
+                    self.log_results(host, port, user, password, service)
                     t.close()
                     return True
                 elif "incorrect" in server_response:
@@ -297,7 +296,8 @@ class CheckCredentials(VulnerableHost):
             ftp_conn.quit()
             ftp_welcome = ftp_conn.getwelcome()
             self.log_results(host, port, user, password, protocol)
-            print "[+] FTP server responded with {0}".format(ftp_welcome)
+            if self.verbose:
+                print "[+] FTP server responded with {0}".format(ftp_welcome)
             return True
         except Exception as error:
             self.log_service_error(host, port, protocol, error)
@@ -315,12 +315,14 @@ class CheckCredentials(VulnerableHost):
             for credential in credentials:
                 user = credential[0]
                 password = credential[1]
-                print "[*] Testing FTP connection on {0}...".format(host)
+                if self.verbose:
+                    print "[*] Testing FTP connection on {0}...".format(host)
                 try:
                     ftp_conn = FTP()
                     if ftp_conn.connect(host, 21, 1):
                         ftp_welcome = ftp_conn.getwelcome()
-                        print "[*] FTP server returned {0}".format(ftp_welcome)
+                        if self.verbose:
+                            print "[*] FTP server returned {0}".format(ftp_welcome)
                         ftp_conn.login(user, password)
                         ftp_conn.close()
                         self.log_results(host, port, user, password, service)
@@ -339,7 +341,8 @@ class CheckCredentials(VulnerableHost):
         try:
             self.CONNECTION_LOCK.acquire()
             host = vulnerable_host.ip
-            print "[*] Testing SSH service on {0}...".format(host)
+            if self.verbose:
+                print "[*] Testing SSH service on {0}...".format(host)
             for credential in credentials:
                 try:
                     user = str(credential[0])
@@ -376,7 +379,8 @@ class CheckCredentials(VulnerableHost):
                 http_r1 = conn.getresponse()
                 banner_txt = http_r1.read(1000)
                 headers = http_r1.getheaders()
-                print http_r1.status, http_r1.reason
+                if self.verbose:
+                    print http_r1.status, http_r1.reason
                 # puts banner into the class instance of the host
                 vulnerable_host.put_banner(http_port, banner_txt, http_r1.status, http_r1.reason, headers)
                 with open('banner_grabs.log') as banner_log:
@@ -464,6 +468,7 @@ class CheckCredentials(VulnerableHost):
         """ Function tests hosts for default credentials on open 'admin' ports
         Utilizes threading to greatly speed up the scanning
         """
+        service = "building_threads"
         credentials_to_check = self.build_credentials()
         threads = []
         print "[*] Testing vulnerable host ip addresses..."
@@ -486,7 +491,7 @@ class CheckCredentials(VulnerableHost):
                                                                              credentials_to_check))
                         threads.append(t)
                 if set(self.http_ports) & set(vulnerable_host.ports):
-                    t0 = threading.Thread(target=self.http_post_xml, args=(vulnerable_host,))
+                    t0 = threading.Thread(target=self.http_post_xml, args=(vulnerable_host, ))
                     threads.append(t0)
                     if self.banner is True:
                         t1 = threading.Thread(target=self.banner_grab, args=(vulnerable_host, ))
@@ -498,7 +503,7 @@ class CheckCredentials(VulnerableHost):
         except KeyboardInterrupt:
             exit(0)
         except threading.ThreadError as error:
-            self.log_error(error)
+            self.log_error(service, error)
         except Exception:
             raise
 
@@ -518,6 +523,7 @@ def main():
     if banner is True:
         hh.add_banner_grab(banner)
 
+    service = "run_scan_type"
     try:
         if scan_type == '1':
             print "[*] Running in port scanner mode..."
@@ -533,7 +539,7 @@ def main():
     except KeyboardInterrupt:
         exit(0)
     except Exception as error:
-        hh.log_error(error)
+        hh.log_error(service, error)
     finally:
         print datetime.now() - start_time  # Calculates run time for the program.
 
