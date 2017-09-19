@@ -100,7 +100,7 @@ class HoneyHornet:
         with open('error.log', 'a') as f:
             f.write(log_error_message)
             if self.verbose:
-                print "[*] Error logged: {1}".format(log_error_message)
+                print "[*] Error logged: {0}".format(log_error_message)
 
     # TODO: Deprecated, delete.
     # def find_live_hosts(self, target_list, iL):
@@ -420,7 +420,8 @@ class CheckCredentials(VulnerableHost):
         This only handles one specific type of Web-based Authentication at this time.
         """
         self.CONNECTION_LOCK.acquire()
-        print "[*] Attempting to validate credentials via HTTP-POST..."
+        if self.verbose:
+            print "[*] Attempting to validate credentials via HTTP-POST..."
         host = vulnerable_host.ip
         ports_to_check = set(self.http_ports) & set(vulnerable_host.ports)
         headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0",
