@@ -82,17 +82,16 @@ class HoneyHornet:
             log_file.write(time_now)
             log_file.write(event)
 
-    @staticmethod
-    def log_error(service, error):
+    def log_error(self, service, error):
         """ Logs any Exception or error that is thrown by the program. """
         time_now = datetime.now()
         log_error_message = "{0} service={1}, error={2}\n".format(str(time_now), service, str(error))
         with open('error.log', 'a') as f:
             f.write(log_error_message)
-            print "[*] Error logged: {0}: {1}".format(service, error)
+            if self.verbose:
+                print "[*] Error logged: {0}: {1}".format(service, error)
 
-    @staticmethod
-    def log_service_error(host, port, service, error):
+    def log_service_error(self, host, port, service, error):
         """ Logs any Exception or error related to testing credentials through a service. """
         time_now = datetime.now()
         log_error_message = str(time_now) + " host={0}, port={1}, service={2}, error={3}\n".format(host, port,
@@ -100,7 +99,8 @@ class HoneyHornet:
                                                                                                    str(error))
         with open('error.log', 'a') as f:
             f.write(log_error_message)
-            print "[*] Error logged: {0}:{1} >> {2}".format(host, port, log_error_message)
+            if self.verbose:
+                print "[*] Error logged: {0}:{1} >> {2}".format(host, port, log_error_message)
 
     # TODO: Deprecated, delete.
     # def find_live_hosts(self, target_list, iL):
@@ -539,17 +539,17 @@ def main():
     print "[*] Using default YAML config file..."
     target_hosts = hh.config['targets']
     ports_to_scan = hh.config['ports']
-    scan_type = hh.config['scanType']
+    scan_type = str(hh.config['scanType']).strip('[]')
     banner = hh.config['bannerGrab']
     if banner is True:
         hh.add_banner_grab(banner)
 
     service = "run_scan_type"
     try:
-        if scan_type == 1:
+        if scan_type == '1':
             print "[*] Running in port scanner mode..."
             hh.check_admin_ports(target_hosts, ports_to_scan)
-        elif scan_type == 2:
+        elif scan_type == '2':
             print "[*] Running in credential check mode..."
             hh.check_admin_ports(target_hosts, ports_to_scan)
             hosts_to_check = hh.vulnerable_hosts
