@@ -166,6 +166,8 @@ class HoneyHornet:
                             self.log_open_port(host, port, port_state)
         except Exception as error:
             self.log_error(service, error)
+        except KeyboardInterrupt:
+            exit(0)
 
 
 class VulnerableHost(HoneyHornet):
@@ -231,6 +233,8 @@ class CheckCredentials(VulnerableHost):
         except Exception as error:
             self.log_error(service, error)
             return False
+        except KeyboardInterrupt:
+            exit(0)
 
     def check_telnet(self, vulnerable_host, port, credentials):
         """ Tries to connect via Telnet with common credentials. Then it prints the results of the connection attempt.
@@ -243,9 +247,9 @@ class CheckCredentials(VulnerableHost):
         credentials are supplied. When the wrong credentials are supplied, the response is much more delayed.
         A 3 second timeout has been effective in differentiating between a successful and failed login attempt.
         """
+        service = "TELNET"
         try:
             self.CONNECTION_LOCK.acquire()
-            service = "TELNET"
             host = vulnerable_host.ip
             for credential in credentials:
                 user = credential[0]
@@ -277,6 +281,8 @@ class CheckCredentials(VulnerableHost):
         except Exception as error:
             self.log_service_error(host, port, service, error)
             return False
+        except KeyboardInterrupt:
+            exit(0)
         finally:
             self.CONNECTION_LOCK.release()
 
@@ -302,6 +308,8 @@ class CheckCredentials(VulnerableHost):
         except Exception as error:
             self.log_service_error(host, port, protocol, error)
             return False
+        except KeyboardInterrupt:
+            exit(0)
         finally:
             self.CONNECTION_LOCK.release()
 
@@ -329,8 +337,12 @@ class CheckCredentials(VulnerableHost):
                     break
                 except Exception as error:
                     self.log_service_error(host, port, service, error)
+                except KeyboardInterrupt:
+                    exit(0)
         except Exception as error:
             self.log_error(service, error)
+        except KeyboardInterrupt:
+            exit(0)
         finally:
             self.CONNECTION_LOCK.release()
 
@@ -359,8 +371,12 @@ class CheckCredentials(VulnerableHost):
                     self.log_service_error(host, port, service, EOF_error)
                 except pxssh.ExceptionPxssh as error:
                     self.log_service_error(host, port, service, error)
+                except KeyboardInterrupt:
+                    exit(0)
         except threading.ThreadError as thread_error:
             self.log_error(service, thread_error)
+        except KeyboardInterrupt:
+            exit(0)
         finally:
             self.CONNECTION_LOCK.release()
 
@@ -393,6 +409,8 @@ class CheckCredentials(VulnerableHost):
             if http_port is None:
                 http_port = ""
             self.log_service_error(host, http_port, service, error)
+        except KeyboardInterrupt:
+            exit(0)
         finally:
             self.CONNECTION_LOCK.release()
 
@@ -402,6 +420,7 @@ class CheckCredentials(VulnerableHost):
         This only handles one specific type of Web-based Authentication at this time.
         """
         self.CONNECTION_LOCK.acquire()
+        print "[*] Attempting to validate credentials via HTTP-POST..."
         host = vulnerable_host.ip
         ports_to_check = set(self.http_ports) & set(vulnerable_host.ports)
         headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0",
@@ -421,24 +440,24 @@ class CheckCredentials(VulnerableHost):
                 x = f.read()
                 m = re.findall(r"CDATA\[(?P<password>\w*)\]", x)
                 if m:
-                    password = m[0]
-                    print password
-                    return password
+                    password_to_use = m[0]
+                    if self.verbose:
+                        print password_to_use
+                    return password_to_use
                 else:
-                    print "nothing found"
+                    print "[!] Error: unable to extract password from xml file."
 
         def read_xml(xml_file):
             """ Reads the XML file to put in body of request """
-            with open(xml_file, 'r') as f:
-                xml = f.read()
-                return xml
+            with open(xml_file, 'r') as xml_to_load:
+                xml_payload = xml_to_load.read()
+                return xml_payload
 
         # Tries to connect to host via HTTP-POST w/ the XML authentication in the body of the request.
         # Uses Regular Expressions to extract errors for debugging/tuning the program.
         try:
             for http_port in ports_to_check:
                 conn = httplib.HTTPConnection(host, http_port, timeout=25)
-                print "[*] Attempting to validate credentials via HTTP-POST..."
                 xml = read_xml(xml_connect)
                 conn.request("POST", "/", xml, headers)
                 response = conn.getresponse()
@@ -461,6 +480,8 @@ class CheckCredentials(VulnerableHost):
             if error_msg:
                 error = error_msg[0]
                 self.log_service_error(host, http_port, method, error)
+        except KeyboardInterrupt:
+            exit(0)
         finally:
             self.CONNECTION_LOCK.release()
 
