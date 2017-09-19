@@ -539,17 +539,17 @@ def main():
     print "[*] Using default YAML config file..."
     target_hosts = hh.config['targets']
     ports_to_scan = hh.config['ports']
-    scan_type = str(hh.config['scanType']).strip('['']')
+    scan_type = hh.config['scanType']
     banner = hh.config['bannerGrab']
     if banner is True:
         hh.add_banner_grab(banner)
 
     service = "run_scan_type"
     try:
-        if scan_type == '1':
+        if scan_type == 1:
             print "[*] Running in port scanner mode..."
             hh.check_admin_ports(target_hosts, ports_to_scan)
-        elif scan_type == '2':
+        elif scan_type == 2:
             print "[*] Running in credential check mode..."
             hh.check_admin_ports(target_hosts, ports_to_scan)
             hosts_to_check = hh.vulnerable_hosts
