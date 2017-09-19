@@ -100,7 +100,7 @@ class HoneyHornet:
         with open('error.log', 'a') as f:
             f.write(log_error_message)
             if self.verbose:
-                print "[*] Error logged: {0}:{1} >> {2}".format(host, port, log_error_message)
+                print "[*] Error logged: {1}".format(log_error_message)
 
     # TODO: Deprecated, delete.
     # def find_live_hosts(self, target_list, iL):
