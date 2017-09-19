@@ -322,7 +322,7 @@ class CheckCredentials(VulnerableHost):
             host = vulnerable_host.ip
             for credential in credentials:
                 user = credential[0]
-                password = credential[1]
+                password = str(credential[1])
                 if self.verbose:
                     print "[*] Testing FTP connection on {0}...".format(host)
                 try:
