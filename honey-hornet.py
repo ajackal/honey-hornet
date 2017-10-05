@@ -462,7 +462,8 @@ class CheckCredentials(VulnerableHost):
                 xml = read_xml(xml_connect)
                 conn.request("POST", "/", xml, headers)
                 response = conn.getresponse()
-                print response.status, response.reason
+                if self.verbose:
+                    print response.status, response.reason
                 data = response.read()
                 if "message='OK'" in data:
                     password = get_pass_from_xml()
