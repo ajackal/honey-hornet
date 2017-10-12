@@ -4,7 +4,7 @@ import telnetlib
 from ftplib import FTP
 import threading
 from threading import BoundedSemaphore
-from datetime import datetime
+from datetime import datetime, date
 import httplib
 import re
 from termcolor import colored
@@ -60,47 +60,47 @@ class HoneyHornet:
         self.banner = banner
 
     @staticmethod
-    def log_open_port(host, port, status):
-        """ Logs any host with an open port to a file. """
+    def write_log_file(logfile_name, event):
+        """ Writes the event to the proper log file """
         time_now = datetime.now()
-        event = " host={0}, port={1}, status='{2}'\n".format(colored(host, 'red'), colored(port, 'red'),
-                                                             colored(status, 'green'))
-        print "[*] Open port found:{0}".format(event)
-        with open("open_ports.log", 'a') as log_file:
+        with open(logfile_name, 'a') as log_file:
             log_file.write(str(time_now))
             log_file.write(event)
 
     @staticmethod
+    def log_open_port(host, port, status):
+        """ Logs any host with an open port to a file. """
+        logfile_name = date.today() + "_open_ports.log"
+        event = " host={0}, port={1}, status='{2}'\n".format(host, port, status)
+        print "[*] Open port found:{0}".format(event)
+        write_log_file(logfile_name, event)
+        
+    @staticmethod
     def log_results(host, port, user, password, protocol):
         """ Logs credentials that are successfully recovered. """
-        time_now = str(datetime.now())
+        logfile_name = date.today() + "_recovered_passwords.log"
         print "[*] Recording successful attempt:"
         event = " host={0}, port={1}, user='{2}', password='{3}', protocol='{4}'\n".format(host, port, user, password,
                                                                                            protocol)
         print "[*] Password recovered:{0}".format(event)
-        with open("recovered_passwords.log", 'a') as log_file:
-            log_file.write(time_now)
-            log_file.write(event)
+        write_log_file(logfile_name, event)
 
     def log_error(self, service, error):
         """ Logs any Exception or error that is thrown by the program. """
-        time_now = datetime.now()
+        logfile_name = date.today() + "_error.log"
         log_error_message = "{0} service={1}, error={2}\n".format(str(time_now), service, str(error))
-        with open('error.log', 'a') as f:
-            f.write(log_error_message)
-            if self.verbose:
-                print "[*] Error logged: {0}: {1}".format(service, error)
+        write_log_file(logfile_name, event)
+        if self.verbose:
+            print "[*] Error logged: {0}: {1}".format(service, error)
 
     def log_service_error(self, host, port, service, error):
         """ Logs any Exception or error related to testing credentials through a service. """
-        time_now = datetime.now()
-        log_error_message = str(time_now) + " host={0}, port={1}, service={2}, error={3}\n".format(host, port,
-                                                                                                   service,
-                                                                                                   str(error))
-        with open('error.log', 'a') as f:
-            f.write(log_error_message)
-            if self.verbose:
-                print "[*] Error logged: {0}".format(log_error_message)
+        logfile_name = date.today() + "_service_error.log"
+        log_error_message = str(time_now) + " host={0}, port={1}, service={2},error={3}\
+                                            \n".format(host, port, service, str(error))
+        write_log_file(logfile_name, event)
+        if self.verbose:
+            print "[*] Error logged: {0}".format(log_error_message)
 
     # TODO: Deprecated, delete.
     # def find_live_hosts(self, target_list, iL):
