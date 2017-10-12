@@ -58,7 +58,7 @@ class HoneyHornet:
 
     def add_banner_grab(self, banner):
         self.banner = banner
-
+    
     @staticmethod
     def write_log_file(logfile_name, event):
         """ Writes the event to the proper log file """
@@ -67,38 +67,38 @@ class HoneyHornet:
             log_file.write(str(time_now))
             log_file.write(event)
 
-    @staticmethod
-    def log_open_port(host, port, status):
+    def log_open_port(self, host, port, status):
         """ Logs any host with an open port to a file. """
-        logfile_name = date.today() + "_open_ports.log"
+        logfile_name = str(date.today()) + "_open_ports.log"
         event = " host={0}, port={1}, status='{2}'\n".format(host, port, status)
         print "[*] Open port found:{0}".format(event)
-        write_log_file(logfile_name, event)
+        self.write_log_file(logfile_name, event)
         
-    @staticmethod
-    def log_results(host, port, user, password, protocol):
+    def log_results(self, host, port, user, password, protocol):
         """ Logs credentials that are successfully recovered. """
-        logfile_name = date.today() + "_recovered_passwords.log"
+        logfile_name = str(date.today()) + "_recovered_passwords.log"
         print "[*] Recording successful attempt:"
         event = " host={0}, port={1}, user='{2}', password='{3}', protocol='{4}'\n".format(host, port, user, password,
                                                                                            protocol)
         print "[*] Password recovered:{0}".format(event)
-        write_log_file(logfile_name, event)
+        self.write_log_file(logfile_name, event)
 
     def log_error(self, service, error):
         """ Logs any Exception or error that is thrown by the program. """
-        logfile_name = date.today() + "_error.log"
-        log_error_message = "{0} service={1}, error={2}\n".format(str(time_now), service, str(error))
-        write_log_file(logfile_name, event)
+        logfile_name = str(date.today()) + "_error.log"
+        time_now = datetime.now()
+        event = "{0} service={1}, error={2}\n".format(str(time_now), service, str(error))
+        self.write_log_file(logfile_name, event)
         if self.verbose:
             print "[*] Error logged: {0}: {1}".format(service, error)
 
     def log_service_error(self, host, port, service, error):
         """ Logs any Exception or error related to testing credentials through a service. """
-        logfile_name = date.today() + "_service_error.log"
-        log_error_message = str(time_now) + " host={0}, port={1}, service={2},error={3}\
+        logfile_name = str(date.today()) + "_service_error.log"
+        time_now = datetime.now()
+        event = str(time_now) + " host={0}, port={1}, service={2},error={3}\
                                             \n".format(host, port, service, str(error))
-        write_log_file(logfile_name, event)
+        self.write_log_file(logfile_name, event)
         if self.verbose:
             print "[*] Error logged: {0}".format(log_error_message)
 
@@ -448,6 +448,19 @@ class CheckCredentials(VulnerableHost):
                 else:
                     print "[!] Error: unable to extract password from xml file."
 
+        def get_user_from_xml():
+            """ Extracts the username from the xml file. Uses this when recording the results """
+            with open(xml_connect) as f:
+                x = f.read()
+                m = re.findall(r"<login>(?P<username>\w*)</login>", x)
+                if m:
+                    username = m[0]
+                    if self.verbose:
+                        print username
+                    return username
+                else:
+                    print "[!] Error: unable to extract username from xml file."
+
         def read_xml(xml_file):
             """ Reads the XML file to put in body of request """
             with open(xml_file, 'r') as xml_to_load:
@@ -460,25 +473,27 @@ class CheckCredentials(VulnerableHost):
             for http_port in ports_to_check:
                 conn = httplib.HTTPConnection(host, http_port, timeout=25)
                 xml = read_xml(xml_connect)
-                conn.request("POST", "/", xml, headers)
+                conn.request("POST", "/xml/Connect.xml", xml, headers)
                 response = conn.getresponse()
                 if self.verbose:
                     print response.status, response.reason
                 data = response.read()
                 if "message='OK'" in data:
+                    user = get_user_from_xml()
                     password = get_pass_from_xml()
                     protocol = "WEB-AUTH"
-                    self.log_results(host, http_port, password, method, protocol)
+                    self.log_results(host, http_port, user, password, protocol)
                 else:
-                    error_msg = re.findall(r"message='(?P<error>\w\s/\s\w)'", str(data))
+                    error_msg = re.findall(r"message='(?P<error>.*)'", str(data))
                     if error_msg:
                         error = error_msg[0]
                         print "[*] Server returned: {0}".format(error)
                     else:
-                        print "[*] Server returned: {0}".format(data)
+                        print "[*] Server returned an error."
                 conn.close()
         except Exception as error:
-            error_msg = re.findall("message='(?P<error>.*)'", str(error))
+            raise
+            error_msg = re.findall(r"message='(?P<error>.*)'", str(error))
             if error_msg:
                 error = error_msg[0]
                 self.log_service_error(host, http_port, method, error)

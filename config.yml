@@ -11,26 +11,30 @@ bannerGrab: False
 
 # Ports to scan on each target.
 ports:
-  - 21
-  - 22
-  - 23
-  - 2332
+    #- 21
+    #- 22
+    #- 23
+    #- 2332
   - 9191
-  - 9443
+    #- 9443
 
 # Users to test when running in Check Credentials mode.
 users:
-  - admin
-  - root
-  - user
+    #- admin
+    #- root
+    - user
+    #- viewer
 
 # Passwords to test when running in Check Credentials mode.
 passwords:
-  - admin
-  - camera
+    #- admin
+    #- camera
   - 12345
 
 # Path to list of targets for scanning.
 targets:
+  # Something about the path doesn't work with NMAP:
   # - ~/path/to/target_list.txt
-  - targets.txt
+  # As long as the file is in the same folder, works fine.
+  #- lab_camera.txt
+  - full_cvn_hosts.txt
