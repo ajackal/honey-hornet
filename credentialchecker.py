@@ -70,7 +70,7 @@ class CredentialChecker(VulnerableHost):
         credentials are supplied. When the wrong credentials are supplied, the response is much more delayed.
         A 3 second timeout has been effective in differentiating between a successful and failed login attempt.
         """
-        service = "TELNET"
+        checker_protocol = "TELNET"
         try:
             self.CONNECTION_LOCK.acquire()
             host = vulnerable_host.ip
@@ -90,19 +90,19 @@ class CredentialChecker(VulnerableHost):
                 if self.verbose:
                     print server_response
                 if "OK" in server_response:
-                    self.log_results(host, port, user, password, service)
+                    self.log_results(host, port, user, password, checker_protocol)
                     t.close()
                     return True
                 elif "incorrect" in server_response:
                     error = "Password incorrect."
-                    self.log_service_error(host, port, service, error)
+                    self.log_service_error(host, port, checker_protocol, error)
                     t.close()
                     return False
                 else:
                     t.close()
                     return False
         except Exception as error:
-            self.log_service_error(host, port, service, error)
+            self.log_service_error(host, port, checker_protocol, error)
             return False
         except KeyboardInterrupt:
             exit(0)
@@ -114,7 +114,7 @@ class CredentialChecker(VulnerableHost):
         port = "21"
         user = "Anonymous"
         password = "none"
-        protocol = "FTP"
+        checker_protocol = "FTP"
         try:
             self.CONNECTION_LOCK.acquire()
             host = vulnerable_host.ip
@@ -124,12 +124,12 @@ class CredentialChecker(VulnerableHost):
             ftp_conn.login()
             ftp_conn.quit()
             ftp_welcome = ftp_conn.getwelcome()
-            self.log_results(host, port, user, password, protocol)
+            self.log_results(host, port, user, password, checker_protocol)
             if self.verbose:
                 print "[+] FTP server responded with {0}".format(ftp_welcome)
             return True
         except Exception as error:
-            self.log_service_error(host, port, protocol, error)
+            self.log_service_error(host, port, checker_protocol, error)
             return False
         except KeyboardInterrupt:
             exit(0)
@@ -139,7 +139,7 @@ class CredentialChecker(VulnerableHost):
     def check_ftp(self, vulnerable_host, credentials):
         """ Checks the host for FTP connection using username and password combinations """
         port = "21"
-        service = "FTP"
+        checker_protocol = "FTP"
         try:
             self.CONNECTION_LOCK.acquire()
             host = vulnerable_host.ip
@@ -156,14 +156,14 @@ class CredentialChecker(VulnerableHost):
                             print "[*] FTP server returned {0}".format(ftp_welcome)
                         ftp_conn.login(user, password)
                         ftp_conn.close()
-                        self.log_results(host, port, user, password, service)
+                        self.log_results(host, port, user, password, checker_protocol)
                     break
                 except Exception as error:
-                    self.log_service_error(host, port, service, error)
+                    self.log_service_error(host, port, checker_protocol, error)
                 except KeyboardInterrupt:
                     exit(0)
         except Exception as error:
-            self.log_error(service, error)
+            self.log_error(checker_protocol, error)
         except KeyboardInterrupt:
             exit(0)
         finally:
@@ -172,7 +172,7 @@ class CredentialChecker(VulnerableHost):
     def check_ssh(self, vulnerable_host, credentials):
         """ Function tests the SSH service with all of the users and passwords given """
         port = "22"
-        service = "SSH"
+        checker_protocol = "SSH"
         try:
             self.CONNECTION_LOCK.acquire()
             host = vulnerable_host.ip
@@ -187,17 +187,17 @@ class CredentialChecker(VulnerableHost):
                     # Old SSH servers running "ssh-dss" needs this option instead:
                     ssh_conn = pxssh.pxssh(options={"StrictHostKeyChecking": "no", "HostKeyAlgorithms": "+ssh-dss"})
                     ssh_conn.login(host, user, password)
-                    self.log_results(host, port, user, password, service)
+                    self.log_results(host, port, user, password, checker_protocol)
                     ssh_conn.logout()
                     ssh_conn.close()
                 except pxssh.EOF as EOF_error:
-                    self.log_service_error(host, port, service, EOF_error)
+                    self.log_service_error(host, port, checker_protocol, EOF_error)
                 except pxssh.ExceptionPxssh as error:
-                    self.log_service_error(host, port, service, error)
+                    self.log_service_error(host, port, checker_protocol, error)
                 except KeyboardInterrupt:
                     exit(0)
         except threading.ThreadError as thread_error:
-            self.log_error(service, thread_error)
+            self.log_error(checker_protocol, thread_error)
         except KeyboardInterrupt:
             exit(0)
         finally:
@@ -243,6 +243,7 @@ class CredentialChecker(VulnerableHost):
         This only handles one specific type of Web-based Authentication at this time.
         """
         self.CONNECTION_LOCK.acquire()
+        checker_protocol = "WEB-AUTH"
         if self.verbose:
             print "[*] Attempting to validate credentials via HTTP-POST..."
         host = vulnerable_host.ip
@@ -254,13 +255,13 @@ class CredentialChecker(VulnerableHost):
                    "X-Requested-With": "XMLHttpRequest",
                    "Connection": "close"}
 
-        xml_connect = "xml/Connect.xml"
+        xml_connect_path = "xml/Connect.xml"
 
         method = "HTTP-POST"
 
         def get_pass_from_xml():
             """ Extracts the password from the xml file. Uses this when recording the results """
-            with open(xml_connect) as f:
+            with open(xml_connect_path) as f:
                 x = f.read()
                 m = re.findall(r"CDATA\[(?P<password>\w*)\]", x)
                 if m:
@@ -273,7 +274,7 @@ class CredentialChecker(VulnerableHost):
 
         def get_user_from_xml():
             """ Extracts the username from the xml file. Uses this when recording the results """
-            with open(xml_connect) as f:
+            with open(xml_connect_path) as f:
                 x = f.read()
                 m = re.findall(r"<login>(?P<username>\w*)</login>", x)
                 if m:
@@ -295,8 +296,9 @@ class CredentialChecker(VulnerableHost):
         try:
             for http_port in ports_to_check:
                 conn = httplib.HTTPConnection(host, http_port, timeout=25)
-                xml = read_xml(xml_connect)
-                conn.request("POST", "/xml/Connect.xml", xml, headers)
+                method = "POST"
+                xml_body = read_xml(xml_connect_path)
+                conn.request(method, xml_connect_path, xml_body, headers)
                 response = conn.getresponse()
                 if self.verbose:
                     print response.status, response.reason
@@ -304,8 +306,7 @@ class CredentialChecker(VulnerableHost):
                 if "message='OK'" in data:
                     user = get_user_from_xml()
                     password = get_pass_from_xml()
-                    protocol = "WEB-AUTH"
-                    self.log_results(host, http_port, user, password, protocol)
+                    self.log_results(host, http_port, user, password, checker_protocol)
                 else:
                     error_msg = re.findall(r"message='(?P<error>.*)'", str(data))
                     if error_msg:
@@ -366,4 +367,13 @@ class CredentialChecker(VulnerableHost):
             self.log_error(service, error)
         except Exception:
             raise
+
+
+def main():
+    cc = CredentialChecker()
+
+
+
+if __name__ == '__main__':
+    main()
 
