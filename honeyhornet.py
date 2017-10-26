@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-from credentialchecker import CredentialChecker
+import credentialchecker
 from threading import BoundedSemaphore
 from datetime import datetime, date
 from termcolor import colored
@@ -176,6 +176,7 @@ def main():
     # TODO: add resume option (read from file)
 
     hh = HoneyHornet()
+    cc = credentialchecker.CredentialChecker()
 
     print "[*] Using default YAML config file..."
     target_hosts = hh.config['targets']
@@ -195,7 +196,7 @@ def main():
             hh.check_admin_ports(target_hosts, ports_to_scan)
             hh.calculate_number_of_hosts(target_hosts)
             hosts_to_check = hh.vulnerable_hosts
-            CredentialChecker().run_credential_test(hosts_to_check)
+            cc.run_credential_test(hosts_to_check)
         else:
             print "[!] Please define a scan type in config file!"
             exit(0)

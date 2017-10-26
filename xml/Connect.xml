@@ -1,6 +1,6 @@
 <request xmlns="urn:acemanager">
   <connect>
-    <login>user</login>
+    <login>viewer</login>
     <password><![CDATA[12345]]></password>
   </connect>
 </request>

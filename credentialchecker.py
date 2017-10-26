@@ -299,9 +299,9 @@ class CredentialChecker(VulnerableHost):
         try:
             for http_port in ports_to_check:
                 conn = httplib.HTTPConnection(host, http_port, timeout=25)
-                method = "POST"
+                # method = "POST"
                 xml_body = read_xml(xml_connect_path)
-                conn.request(method, xml_connect_path, xml_body, headers)
+                conn.request("POST", "/xml/Connect.xml", xml_body, headers)
                 response = conn.getresponse()
                 if self.verbose:
                     print response.status, response.reason
