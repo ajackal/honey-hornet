@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 from honeyhornet import HoneyHornet, VulnerableHost
 import argparse
 from datetime import date, datetime
@@ -381,8 +383,7 @@ def main():
                         help='The protocol you want to check: FTP, SSH, TELNET, HTTP-XML')
     parser.add_argument(['-c', '--credentials'], dest='credentials', type='string', required=True,
                         help='Credentials to test. Format= username:password ')
-    parser.add_argument(['-p', '--password'], dest='password', type='string', required=True, help='Password to test.')
-    parser.add_argument(['-h', '--http-port'], dest='http_port', type='int', help='HTTP port to test.')
+    parser.add_argument(['-h', '--http-port'], dest='http_port', type='int', help='HTTP port to test (w/ HTTP-XML).')
     args = parser.parse_args()
 
     credentials = args.credeneitals.split(':')
@@ -400,6 +401,7 @@ def main():
         print "[!] Unknown service. Please use: FTP, SSH, TELNET, HTTP-XML"
 
     print datetime.now() - start_time  # Calculates run time for the program.
+
 
 if __name__ == '__main__':
     main()
