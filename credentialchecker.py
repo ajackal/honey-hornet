@@ -1,10 +1,10 @@
 from honeyhornet import HoneyHornet, VulnerableHost
+from datetime import date
 import telnetlib
 from ftplib import FTP
 import threading
 import httplib
 import re
-from termcolor import colored
 from pexpect import pxssh
 import time
 import itertools
@@ -34,6 +34,15 @@ class CredentialChecker(VulnerableHost):
         # TODO: add/modify http_ports list
         self.http_ports = [8000, 8080, 8081, 8090, 9191, 9443]
         self.telnet_ports = [23, 2332]
+
+    def log_results(self, host, port, user, password, protocol):
+        """ Logs credentials that are successfully recovered. """
+        logfile_name = str(date.today()) + "_recovered_passwords.log"
+        print "[*] Recording successful attempt:"
+        event = " host={0}, port={1}, user='{2}', password='{3}', protocol='{4}'\n".format(host, port, user, password,
+                                                                                           protocol)
+        print "[*] Password recovered:{0}".format(event)
+        self.write_log_file(logfile_name, event)
 
     def build_credentials(self):
         """ Function takes the usernames and passwords from the configuration file and constructs the credential list.
