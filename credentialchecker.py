@@ -383,7 +383,7 @@ def main():
                         help='The protocol you want to check: FTP, SSH, TELNET, HTTP-XML')
     parser.add_argument(['-c', '--credentials'], dest='credentials', type='string', required=True,
                         help='Credentials to test. Format= username:password ')
-    parser.add_argument(['-h', '--http-port'], dest='http_port', type='int', help='HTTP port to test (w/ HTTP-XML).')
+    parser.add_argument(['-h', '--http-port'], dest='http_port', type='int', help='HTTP port to test.')
     args = parser.parse_args()
 
     credentials = args.credeneitals.split(':')
