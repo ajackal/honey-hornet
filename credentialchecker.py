@@ -1,5 +1,6 @@
 from honeyhornet import HoneyHornet, VulnerableHost
-from datetime import date
+import argparse
+from datetime import date, datetime
 import telnetlib
 from ftplib import FTP
 import threading
@@ -371,8 +372,34 @@ class CredentialChecker(VulnerableHost):
 
 def main():
     cc = CredentialChecker()
+    start_time = datetime.now()
+    # TODO: add resume option (read from file)
+    parser = argparse.ArgumentParser(description="Check a host for login credentials.")
+    parser.add_argument(['-t', '--target'], dest='target', type='string', required=True,
+                        help='IP address to test')
+    parser.add_argument(['-s', '--service'], dest='service', type='string', required=True,
+                        help='The protocol you want to check: FTP, SSH, TELNET, HTTP-XML')
+    parser.add_argument(['-c', '--credentials'], dest='credentials', type='string', required=True,
+                        help='Credentials to test. Format= username:password ')
+    parser.add_argument(['-p', '--password'], dest='password', type='string', required=True, help='Password to test.')
+    parser.add_argument(['-h', '--http-port'], dest='http_port', type='int', help='HTTP port to test.')
+    args = parser.parse_args()
 
+    credentials = args.credeneitals.split(':')
 
+    if args.service is 'FTP':
+        cc.check_ftp_anon(args.target)
+        cc.check_ftp(args.target, credentials)
+    elif args.service is 'SSH':
+        cc.check_ssh(args.target, credentials)
+    elif args.service is 'TELNET':
+        cc.check_telnet(args.target, 23, credentials)
+    elif args.service is 'HTTP-XML':
+        cc.http_post_xml(args.target)
+    else:
+        print "[!] Unknown service. Please use: FTP, SSH, TELNET, HTTP-XML"
+
+    print datetime.now() - start_time  # Calculates run time for the program.
 
 if __name__ == '__main__':
     main()
