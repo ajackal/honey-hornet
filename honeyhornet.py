@@ -51,7 +51,7 @@ class HoneyHornet:
 
     def add_banner_grab(self, banner):
         self.banner = banner
-    
+
     @staticmethod
     def write_log_file(logfile_name, event):
         """ Writes the event to the proper log file """
@@ -86,7 +86,6 @@ class HoneyHornet:
         if self.verbose:
             print "[*] Error logged: {0}".format(event)
 
-    # TODO: Deprecated, delete.
     def calculate_number_of_hosts(self, target_list):
         """ Function scans the list or CIDR block to see which hosts are alive
         writes the live hosts to the 'live_hosts' list
@@ -94,7 +93,7 @@ class HoneyHornet:
         """
         print "[*] scanning for live hosts..."
         try:
-            total = len(target_list)
+            total = len(target_list.split(','))
             live = len(self.vulnerable_hosts)
             percentage = 100 * (float(live) / float(total))
             print "[+] {0} out of {1} hosts are vulnerable or {2}%".format(live, total, percentage)
