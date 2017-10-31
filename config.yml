@@ -3,20 +3,20 @@
 # Defines the type of scan to run.
 # Uncomment one option only.
 scanType:
-  # - 1  # Port Scan
+  #- 1  # Port Scan
   - 2  # Check Credentials
 
 # Uncomment to do banner grabs on HTTP ports.
-bannerGrab: False
+bannerGrab: True
 
 # Ports to scan on each target.
 ports:
-    #- 21
-    #- 22
-    #- 23
-    #- 2332
-  - 9191
-    #- 9443
+    - 21
+    - 22
+    - 23
+    - 2332
+    - 9191
+    - 9443
 
 # Users to test when running in Check Credentials mode.
 users:
@@ -27,8 +27,8 @@ users:
 
 # Passwords to test when running in Check Credentials mode.
 passwords:
-    #- admin
-    #- camera
+  #- admin
+  #- camera
   - 12345
 
 # Path to list of targets for scanning.
@@ -37,4 +37,4 @@ targets:
   # - ~/path/to/target_list.txt
   # As long as the file is in the same folder, works fine.
   #- lab_camera.txt
-  - full_cvn_hosts.txt
+  - targets.txt

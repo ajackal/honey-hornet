@@ -228,7 +228,7 @@ class CredentialChecker(VulnerableHost):
                 if self.verbose:
                     print http_r1.status, http_r1.reason
                 # puts banner into the class instance of the host
-                vulnerable_host.put_banner(http_port, banner_txt, http_r1.status, http_r1.reason, headers)
+                # vulnerable_host.put_banner(http_port, banner_txt, http_r1.status, http_r1.reason, headers)
                 with open('banner_grabs.log') as banner_log:
                     banner_to_log = "host={0}, http_port={1},\nheaders={2},\nbanner={3}\n".format(host, http_port,
                                                                                                   headers, banner_txt)
