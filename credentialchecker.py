@@ -43,7 +43,7 @@ class CredentialChecker(VulnerableHost):
         """ Logs credentials that are successfully recovered. """
         logfile_name = str(date.today()) + "_recovered_passwords.log"
         print "[*] Recording successful attempt:"
-        event = " host={0}, port={1}, user='{2}', password='{3}', protocol='{4}'\n".format(host, port, user, password,
+        event = " host={0}\tport={1}\tuser='{2}'\tpassword='{3}'\tprotocol='{4}'\n".format(host, port, user, password,
                                                                                            protocol)
         print "[*] Password recovered:{0}".format(event)
         self.write_log_file(logfile_name, event)
@@ -51,11 +51,11 @@ class CredentialChecker(VulnerableHost):
     def build_credentials(self):
         """ Function takes the usernames and passwords from the configuration file and constructs the credential list.
         """
-        service = "credential_builder"
         try:
             users = self.config['users']
             passwords = self.config['passwords']
             credentials = list(itertools.product(users, passwords))
+            logging.info('Credentials built successfully.')
             return credentials
         except Exception as error:
             logging.exception(error)
@@ -73,13 +73,15 @@ class CredentialChecker(VulnerableHost):
         credentials are supplied. When the wrong credentials are supplied, the response is much more delayed.
         A 3 second timeout has been effective in differentiating between a successful and failed login attempt.
         """
-        checker_protocol = "TELNET"
+        service = "TELNET"
         try:
             self.CONNECTION_LOCK.acquire()
             host = vulnerable_host.ip
+            logging.info('{0} set for {1} service'.format(host, service))
             for credential in credentials:
                 user = str(credential[0])
                 password = str(credential[1])
+                logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
                 if self.verbose:
                     print "[*] Testing Telnet connection on {0}...".format(host)
                     print "[*] username: {0} password: {1} port: {2}".format(user, password, port)
@@ -93,19 +95,17 @@ class CredentialChecker(VulnerableHost):
                 if self.verbose:
                     print server_response
                 if "OK" in server_response:
-                    self.log_results(host, port, user, password, checker_protocol)
+                    self.log_results(host, port, user, password, service)
                     t.close()
                     return True
                 elif "incorrect" in server_response:
                     error = "Password incorrect."
-                    logging.error("{0}\t{1}\t{2}\t{3}".format(host, port, checker_protocol, error))
+                    logging.error("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
                     t.close()
-                    return False
                 else:
                     t.close()
-                    return False
         except Exception as error:
-            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, checker_protocol, error))
+            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
         except KeyboardInterrupt:
             exit(0)
         finally:
@@ -113,26 +113,28 @@ class CredentialChecker(VulnerableHost):
 
     def check_ftp_anon(self, vulnerable_host):
         """ Function checks the FTP service for anonymous log-ins and does an FTP banner grab """
-        port = "21"
-        user = "Anonymous"
-        password = "none"
-        checker_protocol = "FTP"
+        ftp_anon = {'port': '21',
+                    'user': 'Anonymous',
+                    'password': 'none',
+                    'service': 'FTP'
+                    }
         try:
             self.CONNECTION_LOCK.acquire()
             host = vulnerable_host.ip
+            logging.info('{0} set for {1} service'.format(host, ftp_anon['service']))
             if self.verbose:
                 print "[*] Testing FTP connection on {0}...".format(host)
             ftp_conn = FTP(host)
             ftp_conn.login()
             ftp_conn.quit()
             ftp_welcome = ftp_conn.getwelcome()
-            self.log_results(host, port, user, password, checker_protocol)
+            self.log_results("{0}\t{1}\t{2}\t{3}\t{4}".format(host, ftp_anon['port'], ftp_anon['user'],
+                                                              ftp_anon['password'], ftp_anon['service']))
             if self.verbose:
                 print "[+] FTP server responded with {0}".format(ftp_welcome)
             return True
         except Exception as error:
-            # TODO: Finish changing error logging
-            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, checker_protocol, error))
+            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, ftp_anon['port'], ftp_anon['service'], error))
         except KeyboardInterrupt:
             exit(0)
         finally:
@@ -141,31 +143,34 @@ class CredentialChecker(VulnerableHost):
     def check_ftp(self, vulnerable_host, credentials):
         """ Checks the host for FTP connection using username and password combinations """
         port = "21"
-        checker_protocol = "FTP"
+        service = "FTP"
         try:
             self.CONNECTION_LOCK.acquire()
             host = vulnerable_host.ip
+            logging.info('{0} set for {1} service'.format(host, service))
             for credential in credentials:
                 user = credential[0]
                 password = str(credential[1])
+                logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
                 if self.verbose:
                     print "[*] Testing FTP connection on {0}...".format(host)
                 try:
                     ftp_conn = FTP()
                     if ftp_conn.connect(host, 21, 1):
                         ftp_welcome = ftp_conn.getwelcome()
+                        logging.info("{0} FTP server returned {1}".format(host, ftp_welcome))
                         if self.verbose:
                             print "[*] FTP server returned {0}".format(ftp_welcome)
                         ftp_conn.login(user, password)
                         ftp_conn.close()
-                        self.log_results(host, port, user, password, checker_protocol)
+                        self.log_results(host, port, user, password, service)
                     break
                 except Exception as error:
-                    logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, checker_protocol, error))
+                    logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
                 except KeyboardInterrupt:
                     exit(0)
         except Exception as error:
-            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, checker_protocol, error))
+            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
         except KeyboardInterrupt:
             exit(0)
         finally:
@@ -174,32 +179,34 @@ class CredentialChecker(VulnerableHost):
     def check_ssh(self, vulnerable_host, credentials):
         """ Function tests the SSH service with all of the users and passwords given """
         port = "22"
-        checker_protocol = "SSH"
+        service = "SSH"
         try:
             self.CONNECTION_LOCK.acquire()
             host = vulnerable_host.ip
+            logging.info('{0} set for {1} service'.format(host, service))
             if self.verbose:
                 print "[*] Testing SSH service on {0}...".format(host)
             for credential in credentials:
                 try:
                     user = str(credential[0])
                     password = str(credential[1])
+                    logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
                     # This works for up-to-date SSH servers:
                     # ssh_conn = pxssh.pxssh()
                     # Old SSH servers running "ssh-dss" needs this option instead:
                     ssh_conn = pxssh.pxssh(options={"StrictHostKeyChecking": "no", "HostKeyAlgorithms": "+ssh-dss"})
                     ssh_conn.login(host, user, password)
-                    self.log_results(host, port, user, password, checker_protocol)
+                    self.log_results(host, port, user, password, service)
                     ssh_conn.logout()
                     ssh_conn.close()
                 except pxssh.EOF as EOF_error:
-                    logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, checker_protocol, EOF_error))
+                    logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, EOF_error))
                 except pxssh.ExceptionPxssh as error:
-                    logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, checker_protocol, error))
+                    logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
                 except KeyboardInterrupt:
                     exit(0)
         except threading.ThreadError as thread_error:
-            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, checker_protocol, thread_error))
+            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, thread_error))
         except KeyboardInterrupt:
             exit(0)
         finally:
@@ -216,13 +223,14 @@ class CredentialChecker(VulnerableHost):
             host = str(vulnerable_host)
             ports_to_check = set(ports.split(','))
         # if self.verbose:
+        logging.info('{0} set for {1} service'.format(host, service))
         print "[*] Grabbing banner from {0}".format(host)
         try:
             for http_port in ports_to_check:
                 conn = httplib.HTTPConnection(host, http_port)
                 conn.request("GET", "/")
                 http_r1 = conn.getresponse()
-                banner_txt = http_r1.read(1000)
+                banner_txt = http_r1.read(1024)
                 headers = http_r1.getheaders()
                 if self.verbose:
                     print http_r1.status, http_r1.reason
@@ -245,11 +253,13 @@ class CredentialChecker(VulnerableHost):
         This only handles one specific type of Web-based Authentication at this time.
         """
         self.CONNECTION_LOCK.acquire()
-        checker_protocol = "WEB-AUTH"
+        service = "WEB-AUTH-XML"
         if self.verbose:
             print "[*] Attempting to validate credentials via HTTP-POST..."
         host = vulnerable_host.ip
+        logging.info('{0} set for {1} service'.format(host, service))
         ports_to_check = set(self.http_ports) & set(vulnerable_host.ports)
+        logging.info("Checking {0} ports on {1} for {2}".format(ports_to_check, host, service))
         headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0",
                    "Content-Type": "text/xml",
                    "Accept": "application/xml, text/xml, */*; q=0.01",
@@ -298,7 +308,6 @@ class CredentialChecker(VulnerableHost):
         try:
             for http_port in ports_to_check:
                 conn = httplib.HTTPConnection(host, http_port, timeout=25)
-                # method = "POST"
                 xml_body = read_xml(xml_connect_path)
                 conn.request("POST", "/xml/Connect.xml", xml_body, headers)
                 response = conn.getresponse()
@@ -308,12 +317,13 @@ class CredentialChecker(VulnerableHost):
                 if "message='OK'" in data:
                     user = get_user_from_xml()
                     password = get_pass_from_xml()
-                    self.log_results(host, http_port, user, password, checker_protocol)
+                    self.log_results(host, http_port, user, password, service)
                 else:
                     error_msg = re.findall(r"message='(?P<error>.*)'", str(data))
                     if error_msg:
                         error = error_msg[0]
                         print "[*] Server returned: {0}".format(error)
+                        logging.error("{0} {1}".format(host, error))
                     else:
                         print "[*] Server returned an error."
                 conn.close()
@@ -321,7 +331,7 @@ class CredentialChecker(VulnerableHost):
             error_msg = re.findall(r"message='(?P<error>.*)'", str(error))
             if error_msg:
                 error = error_msg[0]
-                logging.exception("{0}\t{1}\t{2}".format(host, checker_protocol, error))
+                logging.exception("{0}\t{1}\t{2}".format(host, service, error))
         except KeyboardInterrupt:
             exit(0)
         finally:
@@ -407,4 +417,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
