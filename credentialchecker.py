@@ -78,8 +78,8 @@ class CredentialChecker(VulnerableHost):
             self.CONNECTION_LOCK.acquire()
             host = vulnerable_host.ip
             for credential in credentials:
-                user = credential[0]
-                password = credential[1]
+                user = str(credential[0])
+                password = str(credential[1])
                 if self.verbose:
                     print "[*] Testing Telnet connection on {0}...".format(host)
                     print "[*] username: {0} password: {1} port: {2}".format(user, password, port)
