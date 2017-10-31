@@ -206,14 +206,22 @@ class CredentialChecker(VulnerableHost):
         finally:
             self.CONNECTION_LOCK.release()
 
-    def banner_grab(self, vulnerable_host):
+    def banner_grab(self):
         """ simple banner grab with HTTPLIB """
         service = "HTTP-BANNER-GRAB"
         try:
-            self.CONNECTION_LOCK.acquire()
-            host = vulnerable_host.ip
-            if self.verbose:
-                print "[*] Grabbing banner from {0}".format(host)
+            # self.CONNECTION_LOCK.acquire()
+            host = '127.0.0.1'
+            print host
+            try:
+                host = vulnerable_host.ip
+                print "why is it doing this?"
+                print host
+            except:
+                print "yay it works"
+                # host = str(vulnerable_host)
+            # if self.verbose:
+            print "[*] Grabbing banner from {0}".format(host)
             ports_to_check = set(self.http_ports) & set(vulnerable_host.ports)
             for http_port in ports_to_check:
                 conn = httplib.HTTPConnection(host, http_port)
@@ -232,13 +240,15 @@ class CredentialChecker(VulnerableHost):
         except Exception as error:
             if host is None:
                 host = ""
+                print error1
             if http_port is None:
                 http_port = ""
+                print error2
             self.log_service_error(host, http_port, service, error)
         except KeyboardInterrupt:
             exit(0)
-        finally:
-            self.CONNECTION_LOCK.release()
+        # finally:
+        #     self.CONNECTION_LOCK.release()
 
     def http_post_xml(self, vulnerable_host):
         """ Tests for default credentials against an Web-based Authentication
