@@ -98,7 +98,7 @@ class CredentialChecker(VulnerableHost):
                     return True
                 elif "incorrect" in server_response:
                     error = "Password incorrect."
-                    self.log_service_error(host, port, checker_protocol, error)
+                    logging.error("{0}\t{1}\t{2}\t{3}".format(host, port, checker_protocol, error))
                     t.close()
                     return False
                 else:
@@ -132,8 +132,7 @@ class CredentialChecker(VulnerableHost):
             return True
         except Exception as error:
             # TODO: Finish changing error logging
-            self.log_service_error(host, port, checker_protocol, error)
-            return False
+            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, checker_protocol, error))
         except KeyboardInterrupt:
             exit(0)
         finally:
@@ -162,11 +161,11 @@ class CredentialChecker(VulnerableHost):
                         self.log_results(host, port, user, password, checker_protocol)
                     break
                 except Exception as error:
-                    self.log_service_error(host, port, checker_protocol, error)
+                    logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, checker_protocol, error))
                 except KeyboardInterrupt:
                     exit(0)
         except Exception as error:
-            self.log_error(checker_protocol, error)
+            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, checker_protocol, error))
         except KeyboardInterrupt:
             exit(0)
         finally:
@@ -194,13 +193,13 @@ class CredentialChecker(VulnerableHost):
                     ssh_conn.logout()
                     ssh_conn.close()
                 except pxssh.EOF as EOF_error:
-                    self.log_service_error(host, port, checker_protocol, EOF_error)
+                    logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, checker_protocol, EOF_error))
                 except pxssh.ExceptionPxssh as error:
-                    self.log_service_error(host, port, checker_protocol, error)
+                    logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, checker_protocol, error))
                 except KeyboardInterrupt:
                     exit(0)
         except threading.ThreadError as thread_error:
-            self.log_error(checker_protocol, thread_error)
+            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, checker_protocol, thread_error))
         except KeyboardInterrupt:
             exit(0)
         finally:
@@ -234,11 +233,7 @@ class CredentialChecker(VulnerableHost):
                                                                                                   headers, banner_txt)
                     banner_log.write(banner_to_log)
         except Exception as error:
-            if host is None:
-                host = ""
-            if http_port is None:
-                http_port = ""
-            self.log_service_error(host, http_port, service, error)
+            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, http_port, service, error))
         except KeyboardInterrupt:
             exit(0)
         # finally:
@@ -326,7 +321,7 @@ class CredentialChecker(VulnerableHost):
             error_msg = re.findall(r"message='(?P<error>.*)'", str(error))
             if error_msg:
                 error = error_msg[0]
-                self.log_service_error(host, http_port, method, error)
+                logging.exception("{0}\t{1}\t{2}".format(host, checker_protocol, error))
         except KeyboardInterrupt:
             exit(0)
         finally:
@@ -371,7 +366,7 @@ class CredentialChecker(VulnerableHost):
         except KeyboardInterrupt:
             exit(0)
         except threading.ThreadError as error:
-            self.log_error(service, error)
+            logging.exception("{0}\t{1}".format(service, error))
         except Exception:
             raise
 
@@ -392,7 +387,8 @@ def main():
 
     credentials = args.credeneitals.split(':')
 
-    logging.basicConfig(filename='honeyhornet.log', format='%(asctime)s %(message)s', level=logging.ERROR)
+    logging.basicConfig(filename='honeyhornet.log', format='%(asctime)s %(levelname)s: %(message)s',
+                        level=logging.DEBUG)
 
     if args.service is 'FTP':
         cc.check_ftp_anon(args.target)
