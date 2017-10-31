@@ -2,6 +2,7 @@
 
 from honeyhornet import HoneyHornet, VulnerableHost
 import argparse
+import logging
 from datetime import date, datetime
 import telnetlib
 from ftplib import FTP
@@ -57,8 +58,7 @@ class CredentialChecker(VulnerableHost):
             credentials = list(itertools.product(users, passwords))
             return credentials
         except Exception as error:
-            self.log_error(service, error)
-            return False
+            logging.exception(error)
         except KeyboardInterrupt:
             exit(0)
 
@@ -105,8 +105,7 @@ class CredentialChecker(VulnerableHost):
                     t.close()
                     return False
         except Exception as error:
-            self.log_service_error(host, port, checker_protocol, error)
-            return False
+            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, checker_protocol, error))
         except KeyboardInterrupt:
             exit(0)
         finally:
@@ -132,6 +131,7 @@ class CredentialChecker(VulnerableHost):
                 print "[+] FTP server responded with {0}".format(ftp_welcome)
             return True
         except Exception as error:
+            # TODO: Finish changing error logging
             self.log_service_error(host, port, checker_protocol, error)
             return False
         except KeyboardInterrupt:
@@ -391,6 +391,8 @@ def main():
     args = parser.parse_args()
 
     credentials = args.credeneitals.split(':')
+
+    logging.basicConfig(filename='honeyhornet.log', format='%(asctime)s %(message)s', level=logging.ERROR)
 
     if args.service is 'FTP':
         cc.check_ftp_anon(args.target)
