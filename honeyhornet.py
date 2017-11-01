@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 import credentialchecker
+import logging
 from threading import BoundedSemaphore
 from datetime import datetime, date
 from termcolor import colored
@@ -67,24 +68,26 @@ class HoneyHornet:
         print "[*] Open port found:{0}".format(event)
         self.write_log_file(logfile_name, event)
 
-    def log_error(self, service, error):
-        """ Logs any Exception or error that is thrown by the program. """
-        logfile_name = str(date.today()) + "_error.log"
-        time_now = datetime.now()
-        event = "{0} service={1}, error={2}\n".format(str(time_now), service, str(error))
-        self.write_log_file(logfile_name, event)
-        if self.verbose:
-            print "[*] Error logged: {0}: {1}".format(service, error)
-
-    def log_service_error(self, host, port, service, error):
-        """ Logs any Exception or error related to testing credentials through a service. """
-        logfile_name = str(date.today()) + "_service_error.log"
-        time_now = datetime.now()
-        event = str(time_now) + " host={0}, port={1}, service={2},error={3}\
-                                            \n".format(host, port, service, str(error))
-        self.write_log_file(logfile_name, event)
-        if self.verbose:
-            print "[*] Error logged: {0}".format(event)
+    # TODO: Add INFO level logging
+    # TODO: replace all error logging with built-in module
+    # def log_error(self, service, error):
+    #     """ Logs any Exception or error that is thrown by the program. """
+    #     logfile_name = str(date.today()) + "_error.log"
+    #     time_now = datetime.now()
+    #     event = "{0} service={1}, error={2}\n".format(str(time_now), service, str(error))
+    #     self.write_log_file(logfile_name, event)
+    #     if self.verbose:
+    #         print "[*] Error logged: {0}: {1}".format(service, error)
+    #
+    # def log_service_error(self, host, port, service, error):
+    #     """ Logs any Exception or error related to testing credentials through a service. """
+    #     logfile_name = str(date.today()) + "_service_error.log"
+    #     time_now = datetime.now()
+    #     event = str(time_now) + " host={0}, port={1}, service={2},error={3}\
+    #                                         \n".format(host, port, service, str(error))
+    #     self.write_log_file(logfile_name, event)
+    #     if self.verbose:
+    #         print "[*] Error logged: {0}".format(event)
 
     def calculate_number_of_hosts(self, target_list):
         """ Function scans the list or CIDR block to see which hosts are alive
@@ -184,6 +187,7 @@ def main():
     banner = hh.config['bannerGrab']
     if banner is True:
         hh.add_banner_grab(banner)
+    print hh.banner
 
     service = "run_scan_type"
     try:
