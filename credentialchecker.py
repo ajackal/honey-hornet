@@ -396,8 +396,8 @@ class CredentialChecker(HoneyHornet):
                     if self.banner is True:
                         t1 = threading.Thread(target=self.banner_grab, args=(vulnerable_host, ))
                         threads.append(t1)
+            logging.info("Starting {0} threads.".format(len(threads)))
             for thread in threads:
-                logging.info("Starting threads.")
                 thread.start()
             for thread in threads:
                 thread.join()
