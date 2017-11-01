@@ -64,7 +64,7 @@ class HoneyHornet:
     def log_open_port(self, host, port, status):
         """ Logs any host with an open port to a file. """
         logfile_name = str(date.today()) + "_open_ports.log"
-        event = " host={0}, port={1}, status='{2}'\n".format(host, port, status)
+        event = " host={0}\tport={1}\tstatus='{2}'\n".format(host, port, status)
         print "[*] Open port found:{0}".format(event)
         self.write_log_file(logfile_name, event)
 
@@ -106,7 +106,7 @@ class HoneyHornet:
                 log_totals = "{0}\{1} = {2}%\n".format(live, total, percentage)
                 log_file.write(log_totals)
         except Exception as error:
-            self.log_error("calculate_hosts", error)
+            logging.exception("calculate_hosts\t{0}".format(error))
 
     def check_admin_ports(self, target_list, ports_to_scan):
         """Scans for a live host and for any open common admin ports defined in the configuration file.
@@ -141,7 +141,7 @@ class HoneyHornet:
                             new_host.add_vulnerable_port(port)
                             self.log_open_port(host, port, port_state)
         except Exception as error:
-            self.log_error(service, error)
+            logging.exception("{0}\t{1}".format(service, error))
         except KeyboardInterrupt:
             exit(0)
 
@@ -177,6 +177,9 @@ def main():
     start_time = datetime.now()
     # TODO: add resume option (read from file)
 
+     logging.basicConfig(filename='honeyhornet.log', format='%(asctime)s %(levelname)s: %(message)s',
+                        level=logging.DEBUG)
+
     hh = HoneyHornet()
     cc = credentialchecker.CredentialChecker()
 
@@ -206,7 +209,7 @@ def main():
     except KeyboardInterrupt:
         exit(0)
     except Exception as error:
-        hh.log_error(service, error)
+        logging.exception("{0}\t{1}".format(service, error))
     finally:
         print datetime.now() - start_time  # Calculates run time for the program.
 
