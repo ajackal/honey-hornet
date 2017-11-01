@@ -199,12 +199,14 @@ def main():
         if scan_type == '1':
             print "[*] Running in port scanner mode..."
             hh.check_admin_ports(target_hosts, ports_to_scan)
+            print "[*] Finishing up & exiting..."
         elif scan_type == '2':
             print "[*] Running in credential check mode..."
             hh.check_admin_ports(target_hosts, ports_to_scan)
             hh.calculate_number_of_hosts(target_hosts)
             hosts_to_check = hh.vulnerable_hosts
             cc.run_credential_test(hosts_to_check)
+            print "[*] Finishing up & exiting..."
         else:
             print "[!] Please define a scan type in config file!"
             exit(0)

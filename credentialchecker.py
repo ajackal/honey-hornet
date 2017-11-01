@@ -271,7 +271,7 @@ class CredentialChecker(HoneyHornet):
                     banner_log.write(banner_to_log)
         except httplib.HTTPException:
             try:
-                 self.banner_grab(host, https=True)
+                self.banner_grab(host, https=True)
             except Exception as error:
                 logging.exception("{0}\t{1}\t{2}\t{3}".format(host, http_port, service, error))    
         except Exception as error:
@@ -410,7 +410,7 @@ class CredentialChecker(HoneyHornet):
             for thread in threads:
                 thread.start()
             for thread in threads:
-                thread.join()
+                thread.join(120)
         except KeyboardInterrupt:
             exit(0)
         except threading.ThreadError as error:
