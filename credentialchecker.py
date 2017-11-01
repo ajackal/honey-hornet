@@ -236,7 +236,7 @@ class CredentialChecker(HoneyHornet):
         finally:
             self.CONNECTION_LOCK.release()
 
-    def banner_grab(self, vulnerable_host, ports):
+    def banner_grab(self, vulnerable_host, **kwargs):
         """ simple banner grab with HTTPLIB """
         service = "HTTP-BANNER-GRAB"
         # self.CONNECTION_LOCK.acquire()
@@ -245,7 +245,8 @@ class CredentialChecker(HoneyHornet):
             ports_to_check = set(self.http_ports) & set(vulnerable_host.ports)
         except:
             host = str(vulnerable_host)
-            ports_to_check = set(ports.split(','))
+            if 'ports' in kwargs:
+                ports_to_check = set(ports.split(','))
         # if self.verbose:
         logging.info('{0} set for {1} service'.format(host, service))
         print "[*] Grabbing banner from {0}".format(host)
