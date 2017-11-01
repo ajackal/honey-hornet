@@ -96,7 +96,8 @@ class HoneyHornet:
         """
         print "[*] scanning for live hosts..."
         try:
-            total = len(target_list.split(','))
+            # if target_list is one IP type=string, needs .split(',')
+            total = len(target_list)
             live = len(self.vulnerable_hosts)
             percentage = 100 * (float(live) / float(total))
             print "[+] {0} out of {1} hosts are vulnerable or {2}%".format(live, total, percentage)
