@@ -64,7 +64,7 @@ class HoneyHornet:
     def log_open_port(self, host, port, status):
         """ Logs any host with an open port to a file. """
         logfile_name = str(date.today()) + "_open_ports.log"
-        event = " host={0}\tport={1}\tstatus='{2}'\n".format(host, port, status)
+        event = " host={0}\tport={1}  \tstatus='{2}'\n".format(host, port, status)
         print "[*] Open port found:{0}".format(event)
         self.write_log_file(logfile_name, event)
 
