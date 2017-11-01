@@ -366,6 +366,9 @@ class CredentialChecker(HoneyHornet):
         Utilizes threading to greatly speed up the scanning
         """
         service = "building_threads"
+        logging.info("Buidling threads.")
+        logging.info("Verbosity set to {0}".format(self.verbose))
+        logging.info("Banner Grab variable set to {0}".format(self.banner))
         credentials_to_check = self.build_credentials()
         threads = []
         print "[*] Testing vulnerable host ip addresses..."
@@ -394,6 +397,7 @@ class CredentialChecker(HoneyHornet):
                         t1 = threading.Thread(target=self.banner_grab, args=(vulnerable_host, ))
                         threads.append(t1)
             for thread in threads:
+                logging.info("Starting threads.")
                 thread.start()
             for thread in threads:
                 thread.join()

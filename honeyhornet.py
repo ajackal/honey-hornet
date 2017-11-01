@@ -96,6 +96,7 @@ class HoneyHornet:
         """
         print "[*] scanning for live hosts..."
         try:
+            # TODO: check the target_list, if string, .split(','), else just len()
             # if target_list is one IP type=string, needs .split(',')
             total = len(target_list)
             live = len(self.vulnerable_hosts)
@@ -107,7 +108,7 @@ class HoneyHornet:
                 log_totals = "{0}\{1} = {2}%\n".format(live, total, percentage)
                 log_file.write(log_totals)
         except Exception as error:
-            logging.exception("calculate_hosts\t{0}".format(error))
+            logging.exception("calculate_number_of_hosts\t{0}".format(error))
 
     def check_admin_ports(self, target_list, ports_to_scan):
         """Scans for a live host and for any open common admin ports defined in the configuration file.
