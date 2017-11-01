@@ -347,7 +347,7 @@ class CredentialChecker(HoneyHornet):
                     if error_msg:
                         error = error_msg[0]
                         print "[*] Server returned: {0}".format(error)
-                        logging.error("{0} {1}".format(host, error))
+                        logging.error("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
                     else:
                         print "[*] Server returned an error."
                 conn.close()
@@ -423,7 +423,7 @@ def main():
     parser.add_argument(['-h', '--http-port'], dest='http_port', type='int', help='HTTP port to test.')
     args = parser.parse_args()
 
-    credentials = args.credeneitals.split(':')
+    credentials = args.credenitals.split(':')
 
     log_name = str(date.today()) + " DEBUG.log"
     logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
