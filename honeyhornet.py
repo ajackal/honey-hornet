@@ -179,9 +179,10 @@ def main():
     start_time = datetime.now()
     # TODO: add resume option (read from file)
 
-    logging.basicConfig(filename='honeyhornet.log', format='%(asctime)s %(levelname)s: %(message)s',
+    log_name = str(date.today()) + " DEBUG.log"
+    logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
                         level=logging.DEBUG)
-
+    
     hh = HoneyHornet()
     cc = credentialchecker.CredentialChecker()
 
