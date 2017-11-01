@@ -192,8 +192,7 @@ def main():
     scan_type = str(hh.config['scanType']).strip('[]')
     banner = hh.config['bannerGrab']
     if banner is True:
-        hh.add_banner_grab(banner)
-    print hh.banner
+        cc.add_banner_grab(banner)
 
     service = "run_scan_type"
     try:
