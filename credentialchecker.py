@@ -13,9 +13,8 @@ from pexpect import pxssh
 import time
 import itertools
 
-# Does it need to inherit VulnerableHost.
-# class CredentialChecker(VulnerableHost):
-class CredentialChecker:
+
+class CredentialChecker(HoneyHornet):
     """ CredentialChecker() defines all the methods to check each service for all the credentials defined. Right now the
     supported services are:
 
@@ -35,7 +34,7 @@ class CredentialChecker:
     that might be need to be adjusted.
     """
     def __init__(self):
-        # HoneyHornet.__init__(self)
+        HoneyHornet.__init__(self)
         # TODO: add/modify http_ports list
         self.http_ports = [8000, 8080, 8081, 8090, 9191, 9443]
         self.telnet_ports = [23, 2332]
@@ -44,7 +43,7 @@ class CredentialChecker:
         """ Logs credentials that are successfully recovered. """
         logfile_name = str(date.today()) + "_recovered_passwords.log"
         print "[*] Recording successful attempt:"
-        event = " host={0}\tport={1}\tuser='{2}'\tpassword='{3}'\tprotocol='{4}'\n".format(host, port, user, password,
+        event = " host={0},port={1},user='{2}',password='{3}',protocol='{4}'\n".format(host, port, user, password,
                                                                                            protocol)
         print "[*] Password recovered:{0}".format(event)
         self.write_log_file(logfile_name, event)
@@ -422,7 +421,8 @@ def main():
 
     credentials = args.credeneitals.split(':')
 
-    logging.basicConfig(filename='honeyhornet.log', format='%(asctime)s %(levelname)s: %(message)s',
+    log_name = str(date.today()) + " DEBUG.log"
+    logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
                         level=logging.DEBUG)
 
     if args.service is 'FTP':
