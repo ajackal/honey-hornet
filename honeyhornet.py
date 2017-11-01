@@ -177,7 +177,7 @@ def main():
     start_time = datetime.now()
     # TODO: add resume option (read from file)
 
-     logging.basicConfig(filename='honeyhornet.log', format='%(asctime)s %(levelname)s: %(message)s',
+    logging.basicConfig(filename='honeyhornet.log', format='%(asctime)s %(levelname)s: %(message)s',
                         level=logging.DEBUG)
 
     hh = HoneyHornet()
