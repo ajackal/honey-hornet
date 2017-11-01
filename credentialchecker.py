@@ -13,8 +13,9 @@ from pexpect import pxssh
 import time
 import itertools
 
-
-class CredentialChecker(VulnerableHost):
+# Does it need to inherit VulnerableHost.
+# class CredentialChecker(VulnerableHost):
+class CredentialChecker:
     """ CredentialChecker() defines all the methods to check each service for all the credentials defined. Right now the
     supported services are:
 
@@ -34,7 +35,7 @@ class CredentialChecker(VulnerableHost):
     that might be need to be adjusted.
     """
     def __init__(self):
-        HoneyHornet.__init__(self)
+        # HoneyHornet.__init__(self)
         # TODO: add/modify http_ports list
         self.http_ports = [8000, 8080, 8081, 8090, 9191, 9443]
         self.telnet_ports = [23, 2332]
@@ -49,7 +50,25 @@ class CredentialChecker(VulnerableHost):
         self.write_log_file(logfile_name, event)
 
     def build_credentials(self):
-        """ Function takes the usernames and passwords from the configuration file and constructs the credential list.
+        """ Function takes the usernames and passwords from the configuration file and constructs every possible
+        combination into a single credential list.
+
+        Example from 'config.yml':
+        [...snip...]
+            users:
+                - bob
+                - sally
+
+            passwords:
+                - 12345
+                - secret
+        [...snip...]
+
+        credentials = build_credentials()
+        credentials = [('bob', '12345'), ('bob', 'secret'), ('sally', '12345'), ('sally', 'secret')]
+
+        Then each username can be accessed with credentials[0] and each password with credentials[1]. Simplifies the
+        iteration through every credential combination.
         """
         try:
             users = self.config['users']
@@ -177,7 +196,13 @@ class CredentialChecker(VulnerableHost):
             self.CONNECTION_LOCK.release()
 
     def check_ssh(self, vulnerable_host, credentials):
-        """ Function tests the SSH service with all of the users and passwords given """
+        """ Function tests the SSH service with all of the users and passwords given.
+        
+        1. pxssh.pxssh() works for up-to-date implementations of OpenSSLs SSH.
+        2. If testing against LEGACY SSH implementations you need to add several options to handle it properly:
+                pxssh.pxssh(options={"StrictHostKeyChecking": "no", "HostKeyAlgorithms": "+ssh-dss"})
+                This will disable strict host checking and enable support for SSH-DSS working with most LEGACY SSH implementations.
+         """
         port = "22"
         service = "SSH"
         try:
