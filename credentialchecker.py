@@ -240,6 +240,7 @@ class CredentialChecker(HoneyHornet):
         finally:
             self.CONNECTION_LOCK.release()
 
+    # TODO: continute refining keyword arguments
     def banner_grab(self, vulnerable_host, **kwargs):
         """ simple banner grab with HTTPLIB """
         service = "HTTP-BANNER-GRAB"
@@ -255,11 +256,11 @@ class CredentialChecker(HoneyHornet):
         logging.info('{0} set for {1} service'.format(host, service))
         print "[*] Grabbing banner from {0}".format(host)
         try:
-            for http_port in ports_to_check:
+            for port in ports_to_check:
                 if 'https' in kwargs is True:
-                    conn = httplib.HTTPSConnection(host, http_port)    
+                    conn = httplib.HTTPSConnection(host, port)
                 else:
-                    conn = httplib.HTTPConnection(host, http_port)
+                    conn = httplib.HTTPConnection(host, port)
                 conn.request("GET", "/")
                 http_r1 = conn.getresponse()
                 banner_txt = http_r1.read(1024)
@@ -267,19 +268,19 @@ class CredentialChecker(HoneyHornet):
                 if self.verbose:
                     print http_r1.status, http_r1.reason
                 # puts banner into the class instance of the host
-                vulnerable_host.put_banner(http_port, banner_txt, http_r1.status, http_r1.reason, headers)
+                vulnerable_host.put_banner(port, banner_txt, http_r1.status, http_r1.reason, headers)
                 banner_grab_filename = str(date.today()) + " banner_grabs.log"
                 with open(banner_grab_filename, 'a') as banner_log:
-                    banner_to_log = "host={0}, http_port={1},\nheaders={2},\nbanner={3}\n".format(host, http_port,
+                    banner_to_log = "host={0}, http_port={1},\nheaders={2},\nbanner={3}\n".format(host, port,
                                                                                                   headers, banner_txt)
                     banner_log.write(banner_to_log)
         except httplib.HTTPException:
             try:
                 self.banner_grab(host, https=True)
             except Exception as error:
-                logging.exception("{0}\t{1}\t{2}\t{3}".format(host, http_port, service, error))    
+                logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
         except Exception as error:
-            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, http_port, service, error))
+            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
         except KeyboardInterrupt:
             exit(0)
         # finally:
