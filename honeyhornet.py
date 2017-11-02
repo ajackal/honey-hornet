@@ -98,8 +98,10 @@ class HoneyHornet:
         print "[*] scanning for live hosts..."
         try:
             # TODO: check the target_list, if string, .split(','), else just len()
-            # if target_list is one IP type=string, needs .split(',')
-            total = len(target_list)
+            if type(target_list) is str:
+                total = len(target_list.split(','))
+            else:
+                total = len(target_list)
             live = len(self.vulnerable_hosts)
             percentage = 100 * (float(live) / float(total))
             print "[+] {0} out of {1} hosts are vulnerable or {2}%".format(live, total, percentage)
@@ -179,7 +181,7 @@ class VulnerableHost(HoneyHornet):
          """
         self.banner.append(':{0} {1} {2} {3}\n{4}\n'.format(port, status, reason, banner_txt, headers))
 
-    def write_csv(self):
+    def get_credentials(self):
         """ Formats and writes recovered credentials to a CSV file. """
         results_file = self.time_stamp + " Recovered_Passwords.csv"
         headers = "Time Stamp,IP Address,Service,Port,Username,Password"
