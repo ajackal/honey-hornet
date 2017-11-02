@@ -114,7 +114,7 @@ class CredentialChecker(HoneyHornet):
                     print server_response
                 if "OK" in server_response:
                     self.log_results(host, port, user, password, service)
-                    self.vulnerable_hosts.put_credentials(service, port, user, password)
+                    vulnerable_host.put_credentials(service, port, user, password)
                     t.close()
                 elif "incorrect" in server_response:
                     error = "Password incorrect."
@@ -148,8 +148,8 @@ class CredentialChecker(HoneyHornet):
             ftp_welcome = ftp_conn.getwelcome()
             self.log_results("{0}\t{1}\t{2}\t{3}\t{4}".format(host, ftp_anon['port'], ftp_anon['user'],
                                                               ftp_anon['password'], ftp_anon['service']))
-            self.vulnerable_hosts.put_credentials(ftp_anon['service'], ftp_anon['port'], ftp_anon['user'],
-                                                  ftp_anon['password'])
+            vulnerable_host.put_credentials(ftp_anon['service'], ftp_anon['port'], ftp_anon['user'],
+                                            ftp_anon['password'])
             if self.verbose:
                 print "[+] FTP server responded with {0}".format(ftp_welcome)
             return True
@@ -184,7 +184,7 @@ class CredentialChecker(HoneyHornet):
                         ftp_conn.login(user, password)
                         ftp_conn.close()
                         self.log_results(host, port, user, password, service)
-                        self.vulnerable_hosts.put_credentials(service, port, user, password)
+                        vulnerable_host.put_credentials(service, port, user, password)
                     break
                 except Exception as error:
                     logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
@@ -224,7 +224,7 @@ class CredentialChecker(HoneyHornet):
                     ssh_conn = pxssh.pxssh(options={"StrictHostKeyChecking": "no", "HostKeyAlgorithms": "+ssh-dss"})
                     ssh_conn.login(host, user, password)
                     self.log_results(host, port, user, password, service)
-                    self.vulnerable_hosts.put_credentials(service, port, user, password)
+                    vulnerable_host.put_credentials(service, port, user, password)
                     ssh_conn.logout()
                     ssh_conn.close()
                 except pxssh.EOF as EOF_error:
@@ -357,7 +357,7 @@ class CredentialChecker(HoneyHornet):
                     user = get_user_from_xml()
                     password = get_pass_from_xml()
                     self.log_results(host, port, user, password, service)
-                    self.vulnerable_hosts.put_credentials(service, port, user, password)
+                    vulnerable_host.put_credentials(service, port, user, password)
                 else:
                     error_msg = re.findall(r"message='(?P<error>.*)'", str(data))
                     if error_msg:
