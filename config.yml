@@ -8,10 +8,10 @@ scanType:
 
 resultsFormat:
   - csv
-  #- json
+  - json
 
 # Uncomment to do banner grabs on HTTP ports.
-bannerGrab: True
+bannerGrab: False
 
 # Ports to scan on each target.
 ports:
@@ -20,19 +20,19 @@ ports:
     - 23
     - 2332
     - 9191
-    - 9443
+    #- 9443
 
 # Users to test when running in Check Credentials mode.
 users:
     #- admin
-    #- root
+    - root
     - user
     #- viewer
 
 # Passwords to test when running in Check Credentials mode.
 passwords:
   #- admin
-  #- camera
+  - camera
   - 12345
 
 # Path to list of targets for scanning.
