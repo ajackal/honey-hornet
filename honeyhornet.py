@@ -8,7 +8,7 @@ from termcolor import colored
 import nmap
 import yaml
 import csv
-
+import json
 
 class HoneyHornet:
     """ Main Honey Hornet Class
@@ -43,6 +43,7 @@ class HoneyHornet:
         MAX_CONNECTIONS = 20  # max threads that can be created
         self.CONNECTION_LOCK = BoundedSemaphore(value=MAX_CONNECTIONS)
         self.TIMER_DELAY = 3  # timer delay used for Telnet testing
+        self.time_stamp = str(date.today())
         self.users = []  # users that will be tested
         self.passwords = []  # passwords to be tested
         self.verbose = False  # if there will be a verbose output, default=False
@@ -53,6 +54,21 @@ class HoneyHornet:
 
     def add_banner_grab(self, banner):
         self.banner = banner
+
+    def write_results_to_csv(self):
+        results_file = self.time_stamp + " Recovered_Passwords.csv"
+        headers = "Time Stamp,IP Address,Service,Port,Username,Password"
+        with open(results_file, 'a') as open_csv:
+            csvwriter = csv.writer(open_csv)
+            csvwriter.writerow(headers)
+            for vulnerable_host in self.vulnerable_hosts:
+                vulnerable_host.get_credentials(csvwriter)
+
+    def write_results_to_json(self):
+        results_file = self.time_stamp + " Recovered_Passwords.json"
+        with open(results_file, 'a') as open_json:
+            for vulnerable_host in self.vulnerable_hosts:
+                open_json.write(json.dumps(vulnerable_host.__dict__))
 
     @staticmethod
     def write_log_file(logfile_name, event):
@@ -70,25 +86,6 @@ class HoneyHornet:
         self.write_log_file(logfile_name, event)
 
     # TODO: Add INFO level logging
-    # TODO: replace all error logging with built-in module
-    # def log_error(self, service, error):
-    #     """ Logs any Exception or error that is thrown by the program. """
-    #     logfile_name = str(date.today()) + "_error.log"
-    #     time_now = datetime.now()
-    #     event = "{0} service={1}, error={2}\n".format(str(time_now), service, str(error))
-    #     self.write_log_file(logfile_name, event)
-    #     if self.verbose:
-    #         print "[*] Error logged: {0}: {1}".format(service, error)
-    #
-    # def log_service_error(self, host, port, service, error):
-    #     """ Logs any Exception or error related to testing credentials through a service. """
-    #     logfile_name = str(date.today()) + "_service_error.log"
-    #     time_now = datetime.now()
-    #     event = str(time_now) + " host={0}, port={1}, service={2},error={3}\
-    #                                         \n".format(host, port, service, str(error))
-    #     self.write_log_file(logfile_name, event)
-    #     if self.verbose:
-    #         print "[*] Error logged: {0}".format(event)
 
     def calculate_number_of_hosts(self, target_list):
         """ Function scans the list or CIDR block to see which hosts are alive
@@ -125,7 +122,7 @@ class HoneyHornet:
         Ports list as argument needed to have the whitespace stripped between each port, otherwise the NMAP command
         is not constructed properly.
         """
-        # TODO: Add up percentage like in live hosts above.
+
         service = "admin_port_scanner"
         try:
             scanner = nmap.PortScanner()  # defines port scanner function
@@ -161,7 +158,6 @@ class VulnerableHost(HoneyHornet):
         self.credentials = {}
         self.banner = []
         self.ip = ipaddr
-        self.time_stamp = str(date.today())
 
     def add_vulnerable_port(self, port):
         """ Function appends open admin port to list. """
@@ -181,16 +177,10 @@ class VulnerableHost(HoneyHornet):
          """
         self.banner.append(':{0} {1} {2} {3}\n{4}\n'.format(port, status, reason, banner_txt, headers))
 
-    def get_credentials(self):
+    def get_credentials(self, csvwriter):
         """ Formats and writes recovered credentials to a CSV file. """
-        results_file = self.time_stamp + " Recovered_Passwords.csv"
-        headers = "Time Stamp,IP Address,Service,Port,Username,Password"
-        with open(results_file, 'a') as open_csv:
-            csvwriter = csv.writer(open_csv)
-            csvwriter.writerow(headers)
-            for credential in self.credentials:
-                csvwriter.writerow("{0},{1},{2}".format(self.time_stamp, self.ip,
-                                                        self.credentials[credential].values()))
+        for credential in self.credentials:
+            csvwriter.writerow("{0},{1},{2}".format(self.time_stamp, self.ip, self.credentials[credential].values()))
 
 
 def main():
@@ -210,6 +200,8 @@ def main():
     ports_to_scan = hh.config['ports']
     scan_type = str(hh.config['scanType']).strip('[]')
     banner = hh.config['bannerGrab']
+    results_format = hh.config['resultsFormat']
+
     if banner is True:
         cc.add_banner_grab(banner)
 
@@ -234,7 +226,12 @@ def main():
     except Exception as error:
         logging.exception("{0}\t{1}".format(service, error))
     finally:
-        print datetime.now() - start_time  # Calculates run time for the program.
+        print "Runtime is: " + str(datetime.now() - start_time)  # Calculates run time for the program.
+        if 'csv' in results_format:
+            hh.write_results_to_csv()
+        if 'json' in results_format:
+            hh.write_results_to_json()
+        exit(0)
 
 
 if __name__ == "__main__":

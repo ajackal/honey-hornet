@@ -6,6 +6,10 @@ scanType:
   #- 1  # Port Scan
   - 2  # Check Credentials
 
+resultsFormat:
+  - csv
+  #- json
+
 # Uncomment to do banner grabs on HTTP ports.
 bannerGrab: True
 
