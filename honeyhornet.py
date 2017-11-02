@@ -56,19 +56,19 @@ class HoneyHornet:
         self.banner = banner
 
     def write_results_to_csv(self):
-        results_file = self.time_stamp + " Recovered_Passwords.csv"
-        headers = "Time Stamp,IP Address,Service,Port,Username,Password"
+        results_file = self.time_stamp + "_recovered_passwords.csv"
+        headers = "Time Stamp,IP Address,Service,Port,Username,Password\n"
         with open(results_file, 'a') as open_csv:
+            open_csv.write(headers)
             csvwriter = csv.writer(open_csv)
-            csvwriter.writerow(headers)
-            for vulnerable_host in self.vulnerable_hosts:
-                vulnerable_host.get_credentials(csvwriter)
+            for host in self.vulnerable_hosts:
+                host.get_credentials(csvwriter)
 
     def write_results_to_json(self):
-        results_file = self.time_stamp + " Recovered_Passwords.json"
+        results_file = self.time_stamp + "_recovered_passwords.json"
         with open(results_file, 'a') as open_json:
-            for vulnerable_host in self.vulnerable_hosts:
-                open_json.write(json.dumps(vulnerable_host.__dict__))
+            for host in self.vulnerable_hosts:
+                open_json.write(json.dumps(host.__dict__))
 
     @staticmethod
     def write_log_file(logfile_name, event):
@@ -188,7 +188,7 @@ def main():
     start_time = datetime.now()
     # TODO: add resume option (read from file)
 
-    log_name = str(date.today()) + " DEBUG.log"
+    log_name = str(date.today()) + "_DEBUG.log"
     logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
                         level=logging.DEBUG)
     
