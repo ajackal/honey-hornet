@@ -64,7 +64,7 @@ class HoneyHornet:
                 host.get_credentials(open_csv)
 
     def write_results_to_json(self):
-        results_file = self.time_stamp + "_recovered_passwords.json"
+        results_file = self.time_stamp + "_saved_objects.json"
         with open(results_file, 'a') as open_pickle_file:
             for host in self.vulnerable_hosts:
                 cPickle.dump(host, open_pickle_file)
@@ -159,6 +159,9 @@ class VulnerableHost(HoneyHornet):
         self.banner = []
         self.ip = ipaddr
 
+    def __reduce__(self):
+        return (self.__class__.(self.name, self.address))
+
     def add_vulnerable_port(self, port):
         """ Function appends open admin port to list. """
         self.ports.append(port)
@@ -180,7 +183,6 @@ class VulnerableHost(HoneyHornet):
     def get_credentials(self, open_csv):
         """ Formats and writes recovered credentials to a CSV file. """
         for credential in self.credentials:
-            # stripped_credentials = str(self.credentials[credential].values()).strip('[ ]')
             open_csv.write("{0},{1},{2},{3},{4},{5}\n".format(self.time_stamp, self.ip,
                                                               self.credentials[credential]['service'],
                                                               self.credentials[credential]['port'],
