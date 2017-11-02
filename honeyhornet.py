@@ -60,9 +60,8 @@ class HoneyHornet:
         headers = "Time Stamp,IP Address,Service,Port,Username,Password\n"
         with open(results_file, 'a') as open_csv:
             open_csv.write(headers)
-            csvwriter = csv.writer(open_csv)
             for host in self.vulnerable_hosts:
-                host.get_credentials(csvwriter)
+                host.get_credentials(open_csv)
 
     def write_results_to_json(self):
         results_file = self.time_stamp + "_recovered_passwords.json"
@@ -178,10 +177,10 @@ class VulnerableHost(HoneyHornet):
          """
         self.banner.append(':{0} {1} {2} {3}\n{4}\n'.format(port, status, reason, banner_txt, headers))
 
-    def get_credentials(self, csvwriter):
+    def get_credentials(self, open_csv):
         """ Formats and writes recovered credentials to a CSV file. """
         for credential in self.credentials:
-            csvwriter.writerow("{0},{1},{2}".format(self.time_stamp, self.ip, self.credentials[credential].values()))
+            open_csv.write("{0},{1},{2}\n".format(self.time_stamp, self.ip, self.credentials[credential].values()))
 
 
 def main():
