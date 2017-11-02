@@ -8,7 +8,7 @@ from termcolor import colored
 import nmap
 import yaml
 import csv
-import json
+import cPickle
 
 class HoneyHornet:
     """ Main Honey Hornet Class
@@ -65,9 +65,9 @@ class HoneyHornet:
 
     def write_results_to_json(self):
         results_file = self.time_stamp + "_recovered_passwords.json"
-        with open(results_file, 'a') as open_json:
+        with open(results_file, 'a') as open_pickle_file:
             for host in self.vulnerable_hosts:
-                open_json.write(json.dumps(host.__dict__))
+                cPickle.dump(host, open_pickle_file)
 
     @staticmethod
     def write_log_file(logfile_name, event):
