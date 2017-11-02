@@ -45,7 +45,7 @@ class CredentialChecker(HoneyHornet):
         event = " host={0}\tport={1}\tuser='{2}'\tpassword='{3}'\tprotocol='{4}".format(host, port, user, password,
                                                                                            protocol)
         print "[*] Password recovered:{0}".format(event)
-        self.write_log_file("\n")
+        self.write_log_file(logfile_name, "\n")
         self.write_log_file(logfile_name, event)
 
     def build_credentials(self):
