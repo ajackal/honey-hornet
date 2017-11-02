@@ -8,7 +8,7 @@ from termcolor import colored
 import nmap
 import yaml
 import csv
-import cPickle
+import json
 
 class HoneyHornet:
     """ Main Honey Hornet Class
@@ -65,9 +65,9 @@ class HoneyHornet:
 
     def write_results_to_json(self):
         results_file = self.time_stamp + "_saved_objects.json"
-        with open(results_file, 'a') as open_pickle_file:
+        with open(results_file, 'a') as open_json_file:
             for host in self.vulnerable_hosts:
-                cPickle.dump(host, open_pickle_file)
+                open_json_file.write(json.dumps(host))
 
     @staticmethod
     def write_log_file(logfile_name, event):
@@ -158,9 +158,6 @@ class VulnerableHost(HoneyHornet):
         self.credentials = {}
         self.banner = []
         self.ip = ipaddr
-
-    def __reduce__(self):
-        return (self.__class__.(self.name, self.address))
 
     def add_vulnerable_port(self, port):
         """ Function appends open admin port to list. """
