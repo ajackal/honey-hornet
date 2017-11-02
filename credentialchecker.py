@@ -42,7 +42,6 @@ class CredentialChecker(HoneyHornet):
     def log_results(self, host, port, user, password, protocol):
         """ Logs credentials that are successfully recovered. """
         logfile_name = str(date.today()) + "_recovered_passwords.log"
-        print "[*] Recording successful attempt:"
         event = " host={0}\tport={1}\tuser='{2}'\tpassword='{3}'\tprotocol='{4}'\n".format(host, port, user, password,
                                                                                            protocol)
         print "[*] Password recovered:{0}".format(event)

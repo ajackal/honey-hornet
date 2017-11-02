@@ -180,7 +180,12 @@ class VulnerableHost(HoneyHornet):
     def get_credentials(self, open_csv):
         """ Formats and writes recovered credentials to a CSV file. """
         for credential in self.credentials:
-            open_csv.write("{0},{1},{2}\n".format(self.time_stamp, self.ip, self.credentials[credential].values()))
+            # stripped_credentials = str(self.credentials[credential].values()).strip('[ ]')
+            open_csv.write("{0},{1},{2}\n".format(self.time_stamp, self.ip,
+                                                  self.credentials[credential]['service'],
+                                                  self.credentials[credential]['port'],
+                                                  self.credentials[credential]['user'],
+                                                  self.credentials[credential]['password']))
 
 
 def main():
