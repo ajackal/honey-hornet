@@ -366,7 +366,8 @@ class CredentialChecker(HoneyHornet):
                             print "[*] Server returned: {0}".format(error)
                         logging.error("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
                     else:
-                        print "[*] Server returned an error."
+                        if self.verbose:
+                            print "[*] Server returned an error."
                 conn.close()
         except Exception as error:
             error_msg = re.findall(r"message='(?P<error>.*)'", str(error))
