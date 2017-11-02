@@ -114,7 +114,7 @@ class CredentialChecker(HoneyHornet):
                     print server_response
                 if "OK" in server_response:
                     self.log_results(host, port, user, password, service)
-                    self.vulnerable_hosts.put_credentials(credential_index, new_credentials)
+                    self.vulnerable_hosts.put_credentials(service, port, user, password)
                     t.close()
                 elif "incorrect" in server_response:
                     error = "Password incorrect."
@@ -148,6 +148,8 @@ class CredentialChecker(HoneyHornet):
             ftp_welcome = ftp_conn.getwelcome()
             self.log_results("{0}\t{1}\t{2}\t{3}\t{4}".format(host, ftp_anon['port'], ftp_anon['user'],
                                                               ftp_anon['password'], ftp_anon['service']))
+            self.vulnerable_hosts.put_credentials(ftp_anon['service'], ftp_anon['port'], ftp_anon['user'],
+                                                  ftp_anon['password'])
             if self.verbose:
                 print "[+] FTP server responded with {0}".format(ftp_welcome)
             return True
@@ -182,6 +184,7 @@ class CredentialChecker(HoneyHornet):
                         ftp_conn.login(user, password)
                         ftp_conn.close()
                         self.log_results(host, port, user, password, service)
+                        self.vulnerable_hosts.put_credentials(service, port, user, password)
                     break
                 except Exception as error:
                     logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
@@ -221,6 +224,7 @@ class CredentialChecker(HoneyHornet):
                     ssh_conn = pxssh.pxssh(options={"StrictHostKeyChecking": "no", "HostKeyAlgorithms": "+ssh-dss"})
                     ssh_conn.login(host, user, password)
                     self.log_results(host, port, user, password, service)
+                    self.vulnerable_hosts.put_credentials(service, port, user, password)
                     ssh_conn.logout()
                     ssh_conn.close()
                 except pxssh.EOF as EOF_error:
@@ -340,8 +344,8 @@ class CredentialChecker(HoneyHornet):
         # Tries to connect to host via HTTP-POST w/ the XML authentication in the body of the request.
         # Uses Regular Expressions to extract errors for debugging/tuning the program.
         try:
-            for http_port in ports_to_check:
-                conn = httplib.HTTPConnection(host, http_port, timeout=25)
+            for port in ports_to_check:
+                conn = httplib.HTTPConnection(host, port, timeout=25)
                 xml_body = read_xml(xml_connect_path)
                 conn.request("POST", "/xml/Connect.xml", xml_body, headers)
                 response = conn.getresponse()
@@ -351,13 +355,14 @@ class CredentialChecker(HoneyHornet):
                 if "message='OK'" in data:
                     user = get_user_from_xml()
                     password = get_pass_from_xml()
-                    self.log_results(host, http_port, user, password, service)
+                    self.log_results(host, port, user, password, service)
+                    self.vulnerable_hosts.put_credentials(service, port, user, password)
                 else:
                     error_msg = re.findall(r"message='(?P<error>.*)'", str(data))
                     if error_msg:
                         error = error_msg[0]
                         print "[*] Server returned: {0}".format(error)
-                        logging.error("{0}\t{1}\t{2}\t{3}".format(host, http_port, service, error))
+                        logging.error("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
                     else:
                         print "[*] Server returned an error."
                 conn.close()
@@ -376,7 +381,7 @@ class CredentialChecker(HoneyHornet):
         Utilizes threading to greatly speed up the scanning
         """
         service = "building_threads"
-        logging.info("Buidling threads.")
+        logging.info("Building threads.")
         logging.info("Verbosity set to {0}".format(self.verbose))
         logging.info("Banner Grab variable set to {0}".format(self.banner))
         credentials_to_check = self.build_credentials()
