@@ -67,8 +67,9 @@ class HoneyHornet:
         results_file = self.time_stamp + "_saved_objects.json"
         with open(results_file, 'a') as open_json_file:
             for host in self.vulnerable_hosts:
-                to_json = {'host': host.ip, 'credentials': host.credentials}
+                to_json = {'host': host.ip, 'ports': host.ports, 'credentials': host.credentials}
                 open_json_file.write(json.dumps(to_json))
+                open_json_file.write("\n")
 
     @staticmethod
     def write_log_file(logfile_name, event):
