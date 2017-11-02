@@ -6,3 +6,5 @@
 *.pyc
 .vscode/*
 .idea/*
+*.csv
+*.json
