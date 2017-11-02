@@ -7,6 +7,7 @@ from datetime import datetime, date
 from termcolor import colored
 import nmap
 import yaml
+import csv
 
 
 class HoneyHornet:
@@ -155,23 +156,39 @@ class VulnerableHost(HoneyHornet):
     def __init__(self, ipaddr):
         HoneyHornet.__init__(self)
         self.ports = []
-        self.credentials = []
+        self.credentials = {}
         self.banner = []
         self.ip = ipaddr
+        self.time_stamp = str(date.today())
 
     def add_vulnerable_port(self, port):
         """ Function appends open admin port to list. """
         self.ports.append(port)
 
-    def put_credentials(self, new_credentials):
+    def put_credentials(self, service, port, user, password):
         """ Records credentials of a successful login attempt to an open admin port. """
-        self.credentials.append(new_credentials)
+        credential_index = service + str(port)
+        self.credentials[credential_index] = {}
+        new_credentials = {}
+        new_credentials.update(user=user, password=password, port=port, service=service)
+        self.credentials[credential_index].update(new_credentials)
 
     def put_banner(self, port, banner_txt, status, reason, headers):
         """ Adds port, banner to banner list of a port that is defined in the http_ports list or is not handled
          by another service check.
          """
         self.banner.append(':{0} {1} {2} {3}\n{4}\n'.format(port, status, reason, banner_txt, headers))
+
+    def write_csv(self):
+        """ Formats and writes recovered credentials to a CSV file. """
+        results_file = self.time_stamp + " Recovered_Passwords.csv"
+        headers = "Time Stamp,IP Address,Service,Port,Username,Password"
+        with open(results_file, 'a') as open_csv:
+            csvwriter = csv.writer(open_csv)
+            csvwriter.writerow(headers)
+            for credential in self.credentials:
+                csvwriter.writerow("{0},{1},{2}".format(self.time_stamp, self.ip,
+                                                        self.credentials[credential].values()))
 
 
 def main():

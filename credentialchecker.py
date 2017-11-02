@@ -114,8 +114,8 @@ class CredentialChecker(HoneyHornet):
                     print server_response
                 if "OK" in server_response:
                     self.log_results(host, port, user, password, service)
+                    self.vulnerable_hosts.put_credentials(credential_index, new_credentials)
                     t.close()
-                    return True
                 elif "incorrect" in server_response:
                     error = "Password incorrect."
                     logging.error("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
@@ -246,7 +246,7 @@ class CredentialChecker(HoneyHornet):
         except:
             host = str(vulnerable_host)
             if 'ports' in kwargs:
-                ports_to_check = set(ports.split(','))
+                ports_to_check = set(**kwargs[ports].split(','))
         # if self.verbose:
         logging.info('{0} set for {1} service'.format(host, service))
         print "[*] Grabbing banner from {0}".format(host)
@@ -357,7 +357,7 @@ class CredentialChecker(HoneyHornet):
                     if error_msg:
                         error = error_msg[0]
                         print "[*] Server returned: {0}".format(error)
-                        logging.error("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
+                        logging.error("{0}\t{1}\t{2}\t{3}".format(host, http_port, service, error))
                     else:
                         print "[*] Server returned an error."
                 conn.close()
