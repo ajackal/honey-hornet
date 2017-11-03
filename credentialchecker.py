@@ -69,6 +69,7 @@ class CredentialChecker(HoneyHornet):
         Then each username can be accessed with credentials[0] and each password with credentials[1]. Simplifies the
         iteration through every credential combination.
         """
+        # TODO: build in way to handle blank usernames and passwords
         try:
             users = self.config['users']
             passwords = self.config['passwords']

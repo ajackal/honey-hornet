@@ -7,8 +7,8 @@ from datetime import datetime, date
 from termcolor import colored
 import nmap
 import yaml
-import csv
 import json
+
 
 class HoneyHornet:
     """ Main Honey Hornet Class
