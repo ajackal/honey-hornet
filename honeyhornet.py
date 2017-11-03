@@ -82,9 +82,10 @@ class HoneyHornet:
     def log_open_port(self, host, port, status):
         """ Logs any host with an open port to a file. """
         logfile_name = str(date.today()) + "_open_ports.log"
-        event = " host={0}\tport={1}  \tstatus='{2}'\n".format(host, port, status)
+        event = " host={0}  \tport={1}  \tstatus='{2}'".format(host, port, status)
         print "[*] Open port found:{0}".format(event)
         self.write_log_file(logfile_name, event)
+        self.write_log_file(logfile_name, "\n")
 
     # TODO: Add INFO level logging
 
@@ -93,13 +94,10 @@ class HoneyHornet:
         writes the live hosts to the 'live_hosts' list
         also calculates the percentage of how many hosts are alive
         """
-        print "[*] scanning for live hosts..."
         try:
             # TODO: check the target_list, if string, .split(','), else just len()
-            if type(target_list) is str:
-                total = len(target_list.split(','))
-            else:
-                total = len(target_list)
+            with open(target_list, 'r') as open_target_list:
+                total = len(open_target_list.readlines())
             live = len(self.vulnerable_hosts)
             percentage = 100 * (float(live) / float(total))
             print "[+] {0} out of {1} hosts are vulnerable or {2}%".format(live, total, percentage)
