@@ -6,6 +6,10 @@ scanType:
   #- 1  # Port Scan
   - 2  # Check Credentials
 
+# File path to save the reports
+
+reportFilePath: ~/path/to/reports
+
 resultsFormat:
   - csv
   - json
