@@ -24,9 +24,6 @@ class HoneyHornet:
     Functions that handle two types of results logging:
         1. log_open_ports() logs any open port found during the check_admin_ports() scan.
         2. log_results() logs any credentials from a successful login attempt.
-    Functions that handle two types of error logging:
-        1. log_error() logs general errors with setting up and running the program.
-        2. log_service_error() logs errors specific to testing credentials through a specific service.
 
     The function check_admin_ports() runs an NMAP scan for the targets and ports defined in the YAML config file. It is
     a simple TCP SYN scan (half open) that checks to see if the port is open or not. It does not do service discovery.
