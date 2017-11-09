@@ -1,9 +1,10 @@
 #! /usr/bin/env python
 
-from honeyhornet import HoneyHornet, VulnerableHost
+from honeyhornet import HoneyHornet
 import argparse
 import logging
 from datetime import date, datetime
+from termcolor import colored
 import telnetlib
 from ftplib import FTP
 import threading
@@ -42,7 +43,10 @@ class CredentialChecker(HoneyHornet):
     def log_results(self, host, port, user, password, protocol):
         """ Logs credentials that are successfully recovered. """
         logfile_name = str(date.today()) + "_recovered_passwords.log"
-        event = " host={0}\tport={1}\tuser='{2}'\tpassword='{3}'\tprotocol='{4}".format(host, port, user, password,
+        event = " host={0}\tuser={1}\tpassword={2}   \tport={3}  \tprotocol={4}".format(colored(host, "green"),
+                                                                                        colored(user, "red"),
+                                                                                        colored(password, "red"),
+                                                                                        port,
                                                                                         protocol)
         print "[*] Password recovered:{0}".format(event)
         self.write_log_file(logfile_name, "\n")
@@ -219,9 +223,9 @@ class CredentialChecker(HoneyHornet):
                     password = str(credential[1])
                     logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
                     # This works for up-to-date SSH servers:
-                    # ssh_conn = pxssh.pxssh()
+                    ssh_conn = pxssh.pxssh()
                     # Old SSH servers running "ssh-dss" needs this option instead:
-                    ssh_conn = pxssh.pxssh(options={"StrictHostKeyChecking": "no", "HostKeyAlgorithms": "+ssh-dss"})
+                    # ssh_conn = pxssh.pxssh(options={"StrictHostKeyChecking": "no", "HostKeyAlgorithms": "+ssh-dss"})
                     ssh_conn.login(host, user, password)
                     self.log_results(host, port, user, password, service)
                     vulnerable_host.put_credentials(service, port, user, password)

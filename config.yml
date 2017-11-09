@@ -29,17 +29,17 @@ ports:
 # Users to test when running in Check Credentials mode.
 users:
     #- admin
-    - root
-    - user
+    # - root
+    - user0
     - ''
     #- viewer
 
 # Passwords to test when running in Check Credentials mode.
 passwords:
-  - admin
-  - camera
+  # - admin
+  # - camera
   - 12345
-  - ''
+  # - ''
   
 # Path to list of targets for scanning.
 targets:
