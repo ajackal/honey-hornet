@@ -223,9 +223,9 @@ class CredentialChecker(HoneyHornet):
                     password = str(credential[1])
                     logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
                     # This works for up-to-date SSH servers:
-                    ssh_conn = pxssh.pxssh()
+                    # ssh_conn = pxssh.pxssh()
                     # Old SSH servers running "ssh-dss" needs this option instead:
-                    # ssh_conn = pxssh.pxssh(options={"StrictHostKeyChecking": "no", "HostKeyAlgorithms": "+ssh-dss"})
+                    ssh_conn = pxssh.pxssh(options={"StrictHostKeyChecking": "no", "HostKeyAlgorithms": "+ssh-dss"})
                     ssh_conn.login(host, user, password)
                     self.log_results(host, port, user, password, service)
                     vulnerable_host.put_credentials(service, port, user, password)
