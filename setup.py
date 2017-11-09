@@ -9,6 +9,5 @@ setup(
     author='Chris Miller',
     author_email='ajackal244@gmail.com',
     description='port scanner & credential tester',
-    install_requires=['python-nmap', 'termcolor', 'PyYAML', 'pexpect'],
-    scripts=['build_config.py']
+    install_requires=['python-nmap', 'termcolor', 'PyYAML', 'pexpect']
 )

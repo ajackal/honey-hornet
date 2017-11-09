@@ -1,14 +1,14 @@
 #! /usr/bin/env python
 
-import credentialchecker
+import json
 import logging
-from threading import BoundedSemaphore
-from datetime import datetime, date
-from termcolor import colored
 import nmap
 import yaml
+from datetime import datetime, date
+from threading import BoundedSemaphore
+from termcolor import colored
+import credentialchecker
 import build_config
-import json
 
 
 class HoneyHornet:
@@ -50,7 +50,7 @@ class HoneyHornet:
         self.verbose = False  # if there will be a verbose output, default=False
         self.banner = False  # if we should do a banner grab, default=False
         self.yml_config = 'config.yml'
-        self.config = "yml config will go here."
+        self.config = {}
         # TODO: add the ability for a user to define custom YAML config file.
         try:
             self.load_configuration_file()
