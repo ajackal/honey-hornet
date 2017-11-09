@@ -43,7 +43,7 @@ class CredentialChecker(HoneyHornet):
         """ Logs credentials that are successfully recovered. """
         logfile_name = str(date.today()) + "_recovered_passwords.log"
         event = " host={0}\tport={1}\tuser='{2}'\tpassword='{3}'\tprotocol='{4}".format(host, port, user, password,
-                                                                                           protocol)
+                                                                                        protocol)
         print "[*] Password recovered:{0}".format(event)
         self.write_log_file(logfile_name, "\n")
         self.write_log_file(logfile_name, event)
@@ -70,8 +70,8 @@ class CredentialChecker(HoneyHornet):
         iteration through every credential combination.
         """
         try:
-            users = self.config['users']
-            passwords = self.config['passwords']
+            users = str(self.config['users'])
+            passwords = str(self.config['passwords'])
             credentials = list(itertools.product(users, passwords))
             logging.info('Credentials built successfully.')
             return credentials
@@ -97,8 +97,8 @@ class CredentialChecker(HoneyHornet):
             host = vulnerable_host.ip
             logging.info('{0} set for {1} service'.format(host, service))
             for credential in credentials:
-                user = str(credential[0])
-                password = str(credential[1])
+                user = credential[0]
+                password = credential[1]
                 logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
                 if self.verbose:
                     print "[*] Testing Telnet connection on {0}...".format(host)
@@ -240,20 +240,20 @@ class CredentialChecker(HoneyHornet):
         finally:
             self.CONNECTION_LOCK.release()
 
-    # TODO: continute refining keyword arguments
+    # TODO: continue refining keyword arguments
     def banner_grab(self, vulnerable_host, **kwargs):
         """ simple banner grab with HTTPLIB """
         service = "HTTP-BANNER-GRAB"
-        # self.CONNECTION_LOCK.acquire()
+        self.CONNECTION_LOCK.acquire()
         try:
             host = vulnerable_host.ip
             ports_to_check = set(self.http_ports) & set(vulnerable_host.ports)
-        except:
+        except vulnerable_host.DoesNotExist:
             host = str(vulnerable_host)
             if 'ports' in kwargs:
-                ports_to_check = set(**kwargs[ports].split(','))
-        # if self.verbose:
-        logging.info('{0} set for {1} service'.format(host, service))
+                ports_to_check = set(kwargs[ports].split(','))
+        if self.verbose:
+            logging.info('{0} set for {1} service'.format(host, service))
         print "[*] Grabbing banner from {0}".format(host)
         try:
             for port in ports_to_check:
@@ -283,8 +283,8 @@ class CredentialChecker(HoneyHornet):
             logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
         except KeyboardInterrupt:
             exit(0)
-        # finally:
-        #     self.CONNECTION_LOCK.release()
+        finally:
+            self.CONNECTION_LOCK.release()
 
     def http_post_xml(self, vulnerable_host):
         """ Tests for default credentials against an Web-based Authentication
