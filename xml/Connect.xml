@@ -1,6 +1,0 @@
-<request xmlns="urn:acemanager">
-  <connect>
-    <login>$username$</login>
-    <password><![CDATA[$password$]]></password>
-  </connect>
-</request>

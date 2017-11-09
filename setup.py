@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='honeyhornet',
     version='1.0',
-    packages=['credentialchecker', 'honeyhornet'],
+    packages=['honeyhornet'],
     url='https://github.com/ajackal/honey-hornet.git',
     license='GNU General Public License v3.0',
     author='Chris Miller',
