@@ -56,6 +56,7 @@ class HoneyHornet:
     def add_banner_grab(self, banner):
         self.banner = banner
 
+    # TODO: add write file to path
     def write_results_to_csv(self):
         results_file = self.time_stamp + "_recovered_passwords.csv"
         headers = "Time Stamp,IP Address,Service,Port,Username,Password\n"

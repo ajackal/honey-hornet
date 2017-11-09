@@ -30,15 +30,19 @@ ports:
 users:
     #- admin
     # - root
-    - user0
-    - ''
-    #- viewer
+    - user
+    - viewer
+
+    # Blank User
+    # - ''
 
 # Passwords to test when running in Check Credentials mode.
 passwords:
   # - admin
   # - camera
   - 12345
+
+  # Blank Password
   # - ''
   
 # Path to list of targets for scanning.
@@ -48,4 +52,4 @@ targets:
   # As long as the file is in the same folder, works fine.
   # - lab_camera.txt
   - devtest.txt
-  # - targets.txt
+  - targets.txt
