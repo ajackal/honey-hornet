@@ -7,7 +7,7 @@ from datetime import datetime, date
 from termcolor import colored
 import nmap
 import yaml
-import csv
+import build_config
 import json
 
 
@@ -49,8 +49,17 @@ class HoneyHornet:
         self.passwords = []  # passwords to be tested
         self.verbose = False  # if there will be a verbose output, default=False
         self.banner = False  # if we should do a banner grab, default=False
+        self.yml_config = 'config.yml'
+        self.config = "yml config will go here."
         # TODO: add the ability for a user to define custom YAML config file.
-        with open('config.yml', 'r') as cfg_file:
+        try:
+            self.load_configuration_file()
+        except IOError:
+            b = build_config.BuildConfig()
+            self.load_configuration_file()
+
+    def load_configuration_file(self):
+        with open(self.yml_config, 'r') as cfg_file:
             self.config = yaml.load(cfg_file)
 
     def add_banner_grab(self, banner):
