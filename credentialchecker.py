@@ -355,8 +355,8 @@ class CredentialChecker(HoneyHornet):
                 for credential in credentials:
                     user = str(credential[0])
                     password = str(credential[1])
-                    xml_body.replace('$username$', user)
-                    xml_body.replace('$password$', password)
+                    xml_body = xml_body.replace('$username$', user)
+                    xml_body = xml_body.replace('$password$', password)
                     logging.debug(xml_body)
                     logging.info("Checking {0}:{1} on {2} with {3}".format(user, password, host, service))
                     conn.request("POST", "/xml/Connect.xml", xml_body, headers)
