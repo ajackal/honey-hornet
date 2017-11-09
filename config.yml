@@ -46,5 +46,6 @@ targets:
   # Something about the path doesn't work with NMAP:
   # - ~/path/to/target_list.txt
   # As long as the file is in the same folder, works fine.
-  #- lab_camera.txt
-  - targets.txt
+  # - lab_camera.txt
+  - devtest.txt
+  # - targets.txt

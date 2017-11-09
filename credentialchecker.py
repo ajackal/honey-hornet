@@ -70,8 +70,8 @@ class CredentialChecker(HoneyHornet):
         iteration through every credential combination.
         """
         try:
-            users = str(self.config['users'])
-            passwords = str(self.config['passwords'])
+            users = self.config['users']
+            passwords = self.config['passwords']
             credentials = list(itertools.product(users, passwords))
             logging.info('Credentials built successfully.')
             return credentials
