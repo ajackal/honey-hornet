@@ -97,8 +97,8 @@ class CredentialChecker(HoneyHornet):
             host = vulnerable_host.ip
             logging.info('{0} set for {1} service'.format(host, service))
             for credential in credentials:
-                user = credential[0]
-                password = credential[1]
+                user = str(credential[0])
+                password = str(credential[1])
                 logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
                 if self.verbose:
                     print "[*] Testing Telnet connection on {0}...".format(host)
@@ -169,7 +169,7 @@ class CredentialChecker(HoneyHornet):
             host = vulnerable_host.ip
             logging.info('{0} set for {1} service'.format(host, service))
             for credential in credentials:
-                user = credential[0]
+                user = str(credential[0])
                 password = str(credential[1])
                 logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
                 if self.verbose:
@@ -349,8 +349,8 @@ class CredentialChecker(HoneyHornet):
                 conn = httplib.HTTPConnection(host, port, timeout=25)
                 xml_body = read_xml(xml_connect_path)
                 for credential in credentials:
-                    xml_body.replace('$username$', credentials[0])
-                    xml_body.replace('$password$', credentials[1])
+                    xml_body.replace('$username$', str(credential[0]))
+                    xml_body.replace('$password$', str(credential[1]))
                     conn.request("POST", "/xml/Connect.xml", xml_body, headers)
                     response = conn.getresponse()
                     if self.verbose:
