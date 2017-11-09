@@ -351,10 +351,10 @@ class CredentialChecker(HoneyHornet):
         try:
             for port in ports_to_check:
                 conn = httplib.HTTPConnection(host, port, timeout=25)
-                xml_body = read_xml(xml_connect_path)
                 for credential in credentials:
                     user = str(credential[0])
                     password = str(credential[1])
+                    xml_body = read_xml(xml_connect_path)
                     xml_body = xml_body.replace('$username$', user)
                     xml_body = xml_body.replace('$password$', password)
                     logging.debug(xml_body)
