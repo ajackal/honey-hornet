@@ -353,8 +353,12 @@ class CredentialChecker(HoneyHornet):
                 conn = httplib.HTTPConnection(host, port, timeout=25)
                 xml_body = read_xml(xml_connect_path)
                 for credential in credentials:
-                    xml_body.replace('$username$', str(credential[0]))
-                    xml_body.replace('$password$', str(credential[1]))
+                    user = str(credential[0])
+                    password = str(credential[1])
+                    xml_body.replace('$username$', user)
+                    xml_body.replace('$password$', password)
+                    logging.debug(xml_body)
+                    logging.info("Checking {0}:{1} on {2} with {3}".format(user, password, host, service))
                     conn.request("POST", "/xml/Connect.xml", xml_body, headers)
                     response = conn.getresponse()
                     if self.verbose:

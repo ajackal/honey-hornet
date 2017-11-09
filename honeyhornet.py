@@ -85,8 +85,8 @@ class HoneyHornet:
         """ Logs any host with an open port to a file. """
         logfile_name = str(date.today()) + "_open_ports.log"
         event = " host={0}   \tport={1}  \tstatus={2}".format(colored(host, "green"),
-                                                                colored(port, "green"),
-                                                                colored(status, "green"))
+                                                              colored(port, "green"),
+                                                              colored(status, "green"))
         print "[*] Open port found:{0}".format(event)
         self.write_log_file(logfile_name, event)
         self.write_log_file(logfile_name, "\n")
