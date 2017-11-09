@@ -365,8 +365,6 @@ class CredentialChecker(HoneyHornet):
                         print response.status, response.reason
                     data = response.read()
                     if "message='OK'" in data:
-                        user = get_user_from_xml()
-                        password = get_pass_from_xml()
                         self.log_results(host, port, user, password, service)
                         vulnerable_host.put_credentials(service, port, user, password)
                     else:
