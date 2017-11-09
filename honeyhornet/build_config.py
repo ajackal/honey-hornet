@@ -1,6 +1,6 @@
 class BuildConfig:
     def __init__(self):
-        with open("honeyhornet/config.yml", "w") as config_file:
+        with open("config.yml", "w") as config_file:
             config_file.write("# Configuration file for Honey Hornet.\n"
                               "# Defines the type of scan to run.\n"
                               "# Uncomment one option only.\n"
