@@ -34,13 +34,14 @@ users:
     - viewer
 
     # Blank User
-    # - ''
+    - ''
 
 # Passwords to test when running in Check Credentials mode.
 passwords:
   - admin
   - camera
   - 12345
+  - pass
 
   # Blank Password
   - ''
