@@ -46,7 +46,7 @@ class HoneyHornet:
         self.passwords = []  # passwords to be tested
         self.verbose = False  # if there will be a verbose output, default=False
         self.banner = False  # if we should do a banner grab, default=False
-        self.yml_config = 'config.yml'
+        self.yml_config = 'configs/config.yml'
         self.config = {}
         # TODO: add the ability for a user to define custom YAML config file.
         try:
@@ -64,7 +64,7 @@ class HoneyHornet:
 
     # TODO: add write file to path
     def write_results_to_csv(self):
-        results_file = self.time_stamp + "_recovered_passwords.csv"
+        results_file = "reports/" + self.time_stamp + "_recovered_passwords.csv"
         headers = "Time Stamp,IP Address,Service,Port,Username,Password\n"
         with open(results_file, 'a') as open_csv:
             open_csv.write(headers)
@@ -72,7 +72,7 @@ class HoneyHornet:
                 host.get_credentials(open_csv)
 
     def write_results_to_json(self):
-        results_file = self.time_stamp + "_saved_objects.json"
+        results_file = "saves/" + self.time_stamp + "_saved_objects.json"
         with open(results_file, 'a') as open_json_file:
             for host in self.vulnerable_hosts:
                 to_json = {'host': host.ip, 'ports': host.ports, 'credentials': host.credentials}
@@ -84,12 +84,13 @@ class HoneyHornet:
         """ Writes the event to the proper log file """
         time_now = datetime.now()
         with open(logfile_name, 'a') as log_file:
-            log_file.write(str(time_now))
+            if "\n" not in event:
+                log_file.write(str(time_now))
             log_file.write(event)
 
     def log_open_port(self, host, port, status):
         """ Logs any host with an open port to a file. """
-        logfile_name = str(date.today()) + "_open_ports.log"
+        logfile_name = "logs/" + str(date.today()) + "_open_ports.log"
         event = " host={0}   \tport={1}  \tstatus={2}".format(colored(host, "green"),
                                                               colored(port, "green"),
                                                               colored(status, "green"))
@@ -202,7 +203,7 @@ def main():
     start_time = datetime.now()
     # TODO: add resume option (read from file)
 
-    log_name = str(date.today()) + "_DEBUG.log"
+    log_name = "logs/" + str(date.today()) + "_DEBUG.log"
     logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
                         level=logging.DEBUG)
     
