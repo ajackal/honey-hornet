@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 import nmap
 import yaml
 from datetime import datetime, date
@@ -62,9 +63,11 @@ class HoneyHornet:
     def add_banner_grab(self, banner):
         self.banner = banner
 
-    # TODO: add write file to path
     def write_results_to_csv(self):
         results_file = "reports/" + self.time_stamp + "_recovered_passwords.csv"
+        log_directory = os.path.dirname(results_file)
+        if not os.path.exists(log_directory):
+            os.path.mkdir(log_directory)
         headers = "Time Stamp,IP Address,Service,Port,Username,Password\n"
         with open(results_file, 'a') as open_csv:
             open_csv.write(headers)
@@ -73,6 +76,9 @@ class HoneyHornet:
 
     def write_results_to_json(self):
         results_file = "saves/" + self.time_stamp + "_saved_objects.json"
+        log_directory = os.path.dirname(results_file)
+        if not os.path.exists(log_directory):
+            os.path.mkdir(log_directory)
         with open(results_file, 'a') as open_json_file:
             for host in self.vulnerable_hosts:
                 to_json = {'host': host.ip, 'ports': host.ports, 'credentials': host.credentials}
@@ -91,6 +97,9 @@ class HoneyHornet:
     def log_open_port(self, host, port, status):
         """ Logs any host with an open port to a file. """
         logfile_name = "logs/" + str(date.today()) + "_open_ports.log"
+        log_directory = os.path.dirname(logfile_name)
+        if not os.path.exists(log_directory):
+            os.path.mkdir(log_directory)
         event = " host={0}   \tport={1}  \tstatus={2}".format(colored(host, "green"),
                                                               colored(port, "green"),
                                                               colored(status, "green"))
@@ -204,6 +213,9 @@ def main():
     # TODO: add resume option (read from file)
 
     log_name = "logs/" + str(date.today()) + "_DEBUG.log"
+    log_directory = os.path.dirname(log_name)
+    if not os.path.exists(log_directory):
+        os.path.mkdir(log_directory)
     logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
                         level=logging.DEBUG)
     
