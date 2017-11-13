@@ -355,6 +355,8 @@ class CredentialChecker(HoneyHornet):
             if error_msg:
                 error = error_msg[0]
                 logging.exception("{0}\t{1}\t{2}".format(host, service, error))
+            else:
+                logging.exception("{0}\t{1}\t{2}".format(host, service, error))
         except KeyboardInterrupt:
             exit(0)
         finally:
