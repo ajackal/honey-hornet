@@ -116,7 +116,7 @@ class HoneyHornet:
         """
         try:
             # TODO: check the target_list, if string, .split(','), else just len()
-            with open(target_list, 'r') as open_target_list:
+            with open(str(target_list).strip("['']"), 'r') as open_target_list:
                 total = len(open_target_list.readlines())
             live = len(self.vulnerable_hosts)
             percentage = 100 * (float(live) / float(total))
