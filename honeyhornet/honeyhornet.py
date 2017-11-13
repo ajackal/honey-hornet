@@ -123,7 +123,7 @@ class HoneyHornet:
             print "[+] {0} out of {1} hosts are vulnerable or {2}%".format(live, total, percentage)
             logfile_name = "logs/" + str(date.today()) + "_open_ports.log"
             with open(logfile_name, 'a') as log_file:
-                new_log = "##############  NEW SCAN  ##############\n"
+                new_log = "##############  SCAN RESULTS  ##############\n"
                 log_file.write(new_log)
                 log_totals = "{0}\{1} = {2}%\n".format(live, total, percentage)
                 log_file.write(log_totals)
