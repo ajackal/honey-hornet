@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 from honeyhornet import HoneyHornet
+import os
 import argparse
 import logging
 from datetime import date, datetime
@@ -43,6 +44,9 @@ class CredentialChecker(HoneyHornet):
     def log_results(self, host, port, user, password, protocol):
         """ Logs credentials that are successfully recovered. """
         logfile_name = "logs/" + str(date.today()) + "_recovered_passwords.log"
+        log_directory = os.path.dirname(logfile_name)
+        if not os.path.exists(log_directory):
+            os.path.mkdir(log_directory)
         event = " host={0}\tuser={1}\tpassword={2}   \tport={3}  \tprotocol={4}".format(colored(host, "green"),
                                                                                         colored(user, "red"),
                                                                                         colored(password, "red"),
