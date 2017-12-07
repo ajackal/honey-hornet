@@ -4,7 +4,7 @@
 *.bak
 *.swp
 *.pyc
-.vscode/*
-.idea/*
 *.csv
 *.json
+.idea/
+.vscode/

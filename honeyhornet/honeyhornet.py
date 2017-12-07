@@ -2,12 +2,16 @@
 
 import credentialchecker
 import logging
-from threading import BoundedSemaphore
-from datetime import datetime, date
-from termcolor import colored
+import os
 import nmap
 import yaml
 import json
+from datetime import datetime, date
+from threading import BoundedSemaphore
+from termcolor import colored
+import credentialchecker
+import build_config
+
 
 
 class HoneyHornet:
@@ -23,9 +27,6 @@ class HoneyHornet:
     Functions that handle two types of results logging:
         1. log_open_ports() logs any open port found during the check_admin_ports() scan.
         2. log_results() logs any credentials from a successful login attempt.
-    Functions that handle two types of error logging:
-        1. log_error() logs general errors with setting up and running the program.
-        2. log_service_error() logs errors specific to testing credentials through a specific service.
 
     The function check_admin_ports() runs an NMAP scan for the targets and ports defined in the YAML config file. It is
     a simple TCP SYN scan (half open) that checks to see if the port is open or not. It does not do service discovery.
@@ -48,15 +49,27 @@ class HoneyHornet:
         self.passwords = []  # passwords to be tested
         self.verbose = False  # if there will be a verbose output, default=False
         self.banner = False  # if we should do a banner grab, default=False
+        self.yml_config = 'configs/config.yml'
+        self.config = {}
         # TODO: add the ability for a user to define custom YAML config file.
-        with open('config.yml', 'r') as cfg_file:
+        try:
+            self.load_configuration_file()
+        except IOError:
+            b = build_config.BuildConfig()
+            self.load_configuration_file()
+
+    def load_configuration_file(self):
+        with open(self.yml_config, 'r') as cfg_file:
             self.config = yaml.load(cfg_file)
 
     def add_banner_grab(self, banner):
         self.banner = banner
 
     def write_results_to_csv(self):
-        results_file = self.time_stamp + "_recovered_passwords.csv"
+        results_file = "reports/" + self.time_stamp + "_recovered_passwords.csv"
+        log_directory = os.path.dirname(results_file)
+        if not os.path.exists(log_directory):
+            os.path.mkdir(log_directory)
         headers = "Time Stamp,IP Address,Service,Port,Username,Password\n"
         with open(results_file, 'a') as open_csv:
             open_csv.write(headers)
@@ -64,7 +77,10 @@ class HoneyHornet:
                 host.get_credentials(open_csv)
 
     def write_results_to_json(self):
-        results_file = self.time_stamp + "_saved_objects.json"
+        results_file = "saves/" + self.time_stamp + "_saved_objects.json"
+        log_directory = os.path.dirname(results_file)
+        if not os.path.exists(log_directory):
+            os.path.mkdir(log_directory)
         with open(results_file, 'a') as open_json_file:
             for host in self.vulnerable_hosts:
                 to_json = {'host': host.ip, 'ports': host.ports, 'credentials': host.credentials}
@@ -76,13 +92,19 @@ class HoneyHornet:
         """ Writes the event to the proper log file """
         time_now = datetime.now()
         with open(logfile_name, 'a') as log_file:
-            log_file.write(str(time_now))
+            if "\n" not in event:
+                log_file.write(str(time_now))
             log_file.write(event)
 
     def log_open_port(self, host, port, status):
         """ Logs any host with an open port to a file. """
-        logfile_name = str(date.today()) + "_open_ports.log"
-        event = " host={0}  \tport={1}  \tstatus='{2}'".format(host, port, status)
+        logfile_name = "logs/" + str(date.today()) + "_open_ports.log"
+        log_directory = os.path.dirname(logfile_name)
+        if not os.path.exists(log_directory):
+            os.path.mkdir(log_directory)
+        event = " host={0}   \tport={1}  \tstatus={2}".format(colored(host, "green"),
+                                                              colored(port, "green"),
+                                                              colored(status, "green"))
         print "[*] Open port found:{0}".format(event)
         self.write_log_file(logfile_name, event)
         self.write_log_file(logfile_name, "\n")
@@ -96,14 +118,14 @@ class HoneyHornet:
         """
         try:
             # TODO: check the target_list, if string, .split(','), else just len()
-            with open(target_list, 'r') as open_target_list:
+            with open(str(target_list).strip("['']"), 'r') as open_target_list:
                 total = len(open_target_list.readlines())
             live = len(self.vulnerable_hosts)
             percentage = 100 * (float(live) / float(total))
             print "[+] {0} out of {1} hosts are vulnerable or {2}%".format(live, total, percentage)
-            logfile_name = str(date.today()) + "_open_ports.log"
+            logfile_name = "logs/" + str(date.today()) + "_open_ports.log"
             with open(logfile_name, 'a') as log_file:
-                new_log = "##############  NEW SCAN  ##############\n"
+                new_log = "##############  SCAN RESULTS  ##############\n"
                 log_file.write(new_log)
                 log_totals = "{0}\{1} = {2}%\n".format(live, total, percentage)
                 log_file.write(log_totals)
@@ -192,7 +214,10 @@ def main():
     start_time = datetime.now()
     # TODO: add resume option (read from file)
 
-    log_name = str(date.today()) + "_DEBUG.log"
+    log_name = "logs/" + str(date.today()) + "_DEBUG.log"
+    log_directory = os.path.dirname(log_name)
+    if not os.path.exists(log_directory):
+        os.path.mkdir(log_directory)
     logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
                         level=logging.DEBUG)
     

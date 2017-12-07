@@ -1,9 +1,11 @@
 #! /usr/bin/env python
 
-from honeyhornet import HoneyHornet, VulnerableHost
+from honeyhornet import HoneyHornet
+import os
 import argparse
 import logging
 from datetime import date, datetime
+from termcolor import colored
 import telnetlib
 from ftplib import FTP
 import threading
@@ -41,9 +43,15 @@ class CredentialChecker(HoneyHornet):
 
     def log_results(self, host, port, user, password, protocol):
         """ Logs credentials that are successfully recovered. """
-        logfile_name = str(date.today()) + "_recovered_passwords.log"
-        event = " host={0}\tport={1}\tuser='{2}'\tpassword='{3}'\tprotocol='{4}".format(host, port, user, password,
-                                                                                           protocol)
+        logfile_name = "logs/" + str(date.today()) + "_recovered_passwords.log"
+        log_directory = os.path.dirname(logfile_name)
+        if not os.path.exists(log_directory):
+            os.path.mkdir(log_directory)
+        event = " host={0}\tuser={1}\tpassword={2}   \tport={3}  \tprotocol={4}".format(colored(host, "green"),
+                                                                                        colored(user, "red"),
+                                                                                        colored(password, "red"),
+                                                                                        port,
+                                                                                        protocol)
         print "[*] Password recovered:{0}".format(event)
         self.write_log_file(logfile_name, "\n")
         self.write_log_file(logfile_name, event)
@@ -111,6 +119,8 @@ class CredentialChecker(HoneyHornet):
                 t.write(password + "\r\n")
                 time.sleep(self.TIMER_DELAY)
                 server_response = t.read_very_eager()
+                # server_response_long = t.read_all()
+                logging.info("Telnet server {0}:{1} returned:\n{2}".format(host, port, server_response))
                 if self.verbose:
                     print server_response
                 if "OK" in server_response:
@@ -170,7 +180,7 @@ class CredentialChecker(HoneyHornet):
             host = vulnerable_host.ip
             logging.info('{0} set for {1} service'.format(host, service))
             for credential in credentials:
-                user = credential[0]
+                user = str(credential[0])
                 password = str(credential[1])
                 logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
                 if self.verbose:
@@ -241,20 +251,20 @@ class CredentialChecker(HoneyHornet):
         finally:
             self.CONNECTION_LOCK.release()
 
-    # TODO: continute refining keyword arguments
+    # TODO: continue refining keyword arguments
     def banner_grab(self, vulnerable_host, **kwargs):
         """ simple banner grab with HTTPLIB """
         service = "HTTP-BANNER-GRAB"
-        # self.CONNECTION_LOCK.acquire()
+        self.CONNECTION_LOCK.acquire()
         try:
             host = vulnerable_host.ip
             ports_to_check = set(self.http_ports) & set(vulnerable_host.ports)
-        except:
+        except vulnerable_host.DoesNotExist:
             host = str(vulnerable_host)
             if 'ports' in kwargs:
-                ports_to_check = set(**kwargs[ports].split(','))
-        # if self.verbose:
-        logging.info('{0} set for {1} service'.format(host, service))
+                ports_to_check = set(kwargs[ports].split(','))
+        if self.verbose:
+            logging.info('{0} set for {1} service'.format(host, service))
         print "[*] Grabbing banner from {0}".format(host)
         try:
             for port in ports_to_check:
@@ -284,10 +294,10 @@ class CredentialChecker(HoneyHornet):
             logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
         except KeyboardInterrupt:
             exit(0)
-        # finally:
-        #     self.CONNECTION_LOCK.release()
+        finally:
+            self.CONNECTION_LOCK.release()
 
-    def http_post_xml(self, vulnerable_host):
+    def http_post_xml(self, vulnerable_host, credentials):
         """ Tests for default credentials against an Web-based Authentication
         Reads and POSTs data via XML files.
         This only handles one specific type of Web-based Authentication at this time.
@@ -309,34 +319,6 @@ class CredentialChecker(HoneyHornet):
 
         xml_connect_path = "xml/Connect.xml"
 
-        method = "HTTP-POST"
-
-        def get_pass_from_xml():
-            """ Extracts the password from the xml file. Uses this when recording the results """
-            with open(xml_connect_path) as f:
-                x = f.read()
-                m = re.findall(r"CDATA\[(?P<password>\w*)\]", x)
-                if m:
-                    password_to_use = m[0]
-                    if self.verbose:
-                        print password_to_use
-                    return password_to_use
-                else:
-                    print "[!] Error: unable to extract password from xml file."
-
-        def get_user_from_xml():
-            """ Extracts the username from the xml file. Uses this when recording the results """
-            with open(xml_connect_path) as f:
-                x = f.read()
-                m = re.findall(r"<login>(?P<username>\w*)</login>", x)
-                if m:
-                    username = m[0]
-                    if self.verbose:
-                        print username
-                    return username
-                else:
-                    print "[!] Error: unable to extract username from xml file."
-
         def read_xml(xml_file):
             """ Reads the XML file to put in body of request """
             with open(xml_file, 'r') as xml_to_load:
@@ -348,32 +330,39 @@ class CredentialChecker(HoneyHornet):
         try:
             for port in ports_to_check:
                 conn = httplib.HTTPConnection(host, port, timeout=25)
-                xml_body = read_xml(xml_connect_path)
-                conn.request("POST", "/xml/Connect.xml", xml_body, headers)
-                response = conn.getresponse()
-                if self.verbose:
-                    print response.status, response.reason
-                data = response.read()
-                if "message='OK'" in data:
-                    user = get_user_from_xml()
-                    password = get_pass_from_xml()
-                    self.log_results(host, port, user, password, service)
-                    vulnerable_host.put_credentials(service, port, user, password)
-                else:
-                    error_msg = re.findall(r"message='(?P<error>.*)'", str(data))
-                    if error_msg:
-                        error = error_msg[0]
-                        if self.verbose:
-                            print "[*] Server returned: {0}".format(error)
-                        logging.error("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
+                for credential in credentials:
+                    user = str(credential[0])
+                    password = str(credential[1])
+                    xml_body = read_xml(xml_connect_path)
+                    xml_body = xml_body.replace('$username$', user)
+                    xml_body = xml_body.replace('$password$', password)
+                    logging.debug(xml_body)
+                    logging.info("Checking {0}:{1} on {2} with {3}".format(user, password, host, service))
+                    conn.request("POST", "/xml/Connect.xml", xml_body, headers)
+                    response = conn.getresponse()
+                    if self.verbose:
+                        print response.status, response.reason
+                    data = response.read()
+                    if "message='OK'" in data:
+                        self.log_results(host, port, user, password, service)
+                        vulnerable_host.put_credentials(service, port, user, password)
                     else:
-                        if self.verbose:
-                            print "[*] Server returned an error."
-                conn.close()
+                        error_msg = re.findall(r"message='(?P<error>.*)'", str(data))
+                        if error_msg:
+                            error = error_msg[0]
+                            if self.verbose:
+                                print "[*] Server returned: {0}".format(error)
+                            logging.error("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
+                        else:
+                            if self.verbose:
+                                print "[*] Server returned an error."
+                    conn.close()
         except Exception as error:
             error_msg = re.findall(r"message='(?P<error>.*)'", str(error))
             if error_msg:
                 error = error_msg[0]
+                logging.exception("{0}\t{1}\t{2}".format(host, service, error))
+            else:
                 logging.exception("{0}\t{1}\t{2}".format(host, service, error))
         except KeyboardInterrupt:
             exit(0)
@@ -410,7 +399,7 @@ class CredentialChecker(HoneyHornet):
                                                                              credentials_to_check))
                         threads.append(t)
                 if set(self.http_ports) & set(vulnerable_host.ports):
-                    t0 = threading.Thread(target=self.http_post_xml, args=(vulnerable_host, ))
+                    t0 = threading.Thread(target=self.http_post_xml, args=(vulnerable_host, credentials_to_check))
                     threads.append(t0)
                     if self.banner is True:
                         t1 = threading.Thread(target=self.banner_grab, args=(vulnerable_host, ))
