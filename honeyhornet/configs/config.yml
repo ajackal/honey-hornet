@@ -6,9 +6,6 @@ scanType:
   #- 1  # Port Scan
   - 2  # Check Credentials
 
-# File path to save the reports
-
-reportFilePath: ~/path/to/reports
 
 resultsFormat:
   - csv
@@ -22,35 +19,40 @@ ports:
     - 21
     - 22
     - 23
+      #- 2323
     - 2332
     - 9191
     #- 9443
 
 # Users to test when running in Check Credentials mode.
 users:
-    - admin
-    - root
-    - user
+    # - admin
+    #- root
+    #- user
     - viewer
 
     # Blank User
-    - ''
+    #- ''
 
 # Passwords to test when running in Check Credentials mode.
 passwords:
-  - admin
-  - camera
-  - 12345
-  - pass
+    #- admin
+    #- camera
+    - 12345
+    # - ppass
+    # - CenturyL1nk
+    # - CentryL1nk
+    # - QwestM0dem
 
   # Blank Password
-  - ''
+  #- ''
   
 # Path to list of targets for scanning.
 targets:
   # Something about the path doesn't work with NMAP:
   # - ~/path/to/target_list.txt
   # As long as the file is in the same folder, works fine.
-  - targets/lab_targets.txt
+  #- targets/lab_targets.txt
+  - targets/full_target_list.txt
   # - devtest.txt
   # - targets.txt
