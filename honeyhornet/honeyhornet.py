@@ -13,7 +13,6 @@ import credentialchecker
 import build_config
 
 
-
 class HoneyHornet:
     """ Main Honey Hornet Class
 
