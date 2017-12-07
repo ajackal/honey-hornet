@@ -118,6 +118,8 @@ class CredentialChecker(HoneyHornet):
                 t.write(password + "\r\n")
                 time.sleep(self.TIMER_DELAY)
                 server_response = t.read_very_eager()
+                # server_response_long = t.read_all()
+                logging.info("Telnet server {0}:{1} returned:\n{2}".format(host, port, server_response))
                 if self.verbose:
                     print server_response
                 if "OK" in server_response:
