@@ -25,6 +25,7 @@ ports:
   #- 9443
 
 # Users to test when running in Check Credentials mode.
+# need to implement a way to do a blank username and/or password
 users:
   #- admin
   #- root

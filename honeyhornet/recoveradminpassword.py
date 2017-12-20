@@ -1,9 +1,11 @@
-import argparse
+import os
+from datetime import date
 import sys
 import logging
 import httplib
 import re
 from termcolor import colored
+
 
 class SierraWirelessPasswordRecovery:
     def __init__(self, target, port):
@@ -66,15 +68,19 @@ class SierraWirelessPasswordRecovery:
 
 
 def main():
-    # parser = argparse.ArgumentParser(description="Recover an administrator password from Sierra Wireless devices.")
-    # parser.add_argument(['-t', '--target'], dest='target', type='string', required=True,
-    #                     help='IP address to target for password recovery.')
-    # parser.add_argument(['-p', '--port'], dest='port', type='string', required=True,
-    #                     help='Port to web portal interface.')
-    # args = parser.parse_args()
+    if len(sys.argv) != 3:
+        print "[!] Usage: recoveradminpassword.py <ip_address> <port>"
+        exit(0)
+    else:
+        target = sys.argv[1]
+        port = sys.argv[2]
 
-    target = sys.argv[1]
-    port = sys.argv[2]
+    log_name = "logs/" + str(date.today()) + "_DEBUG.log"
+    log_directory = os.path.dirname(log_name)
+    if not os.path.exists(log_directory):
+        os.path.mkdir(log_directory)
+    logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
+                        level=logging.DEBUG)
 
     swpr = SierraWirelessPasswordRecovery(target, port)
     swpr.verbose = True
@@ -84,4 +90,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-        

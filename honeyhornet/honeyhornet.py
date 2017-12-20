@@ -1,10 +1,11 @@
 #! /usr/bin/env python
 
-import json
+import credentialchecker
 import logging
 import os
 import nmap
 import yaml
+import json
 from datetime import datetime, date
 from threading import BoundedSemaphore
 from termcolor import colored
