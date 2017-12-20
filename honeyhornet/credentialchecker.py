@@ -35,12 +35,13 @@ class CredentialChecker(HoneyHornet):
     threads that can be run in parallel is defined in the HoneyHornet class (default=20) but depending on the hardware
     that might be need to be adjusted.
     """
-    def __init__(self):
+    def __init__(self, config):
         HoneyHornet.__init__(self)
         # TODO: add/modify http_ports list
         self.http_ports = [8000, 8080, 8081, 8090, 9191, 9443]
         self.telnet_ports = [23, 2332]
-
+        self.config = config
+        
     def log_results(self, host, port, user, password, protocol):
         """ Logs credentials that are successfully recovered. """
         logfile_name = "logs/" + str(date.today()) + "_recovered_passwords.log"
@@ -428,7 +429,7 @@ def main():
                         help='The protocol you want to check: FTP, SSH, TELNET, HTTP-XML')
     parser.add_argument(['-c', '--credentials'], dest='credentials', type='string', required=True,
                         help='Credentials to test. Format= username:password ')
-    parser.add_argument(['-h', '--http-port'], dest='http_port', type='int', help='HTTP port to test.')
+    parser.add_argument(['-p', '--port'], dest='http_port', type='int', help='HTTP port to test.')
     args = parser.parse_args()
 
     credentials = args.credenitals.split(':')
