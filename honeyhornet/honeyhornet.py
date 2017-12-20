@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 import credentialchecker
+import argparse
 import logging
 import os
 import nmap
@@ -48,18 +49,16 @@ class HoneyHornet:
         self.passwords = []  # passwords to be tested
         self.verbose = False  # if there will be a verbose output, default=False
         self.banner = False  # if we should do a banner grab, default=False
-        self.yml_config = 'configs/config.yml'
+        self.default_config_filepath = "configs/config.yml"
         self.config = {}
-        # TODO: add the ability for a user to define custom YAML config file.
+
+    def load_configuration_file(self, yml_config):
         try:
-            self.load_configuration_file()
+            with open(yml_config, 'r') as cfg_file:
+                self.config = yaml.load(cfg_file)
         except IOError:
             b = build_config.BuildConfig()
-            self.load_configuration_file()
-
-    def load_configuration_file(self):
-        with open(self.yml_config, 'r') as cfg_file:
-            self.config = yaml.load(cfg_file)
+            self.load_configuration_file(self.default_config_filepath)
 
     def add_banner_grab(self, banner):
         self.banner = banner
@@ -212,6 +211,19 @@ def main():
     """ Main program """
     start_time = datetime.now()
     # TODO: add resume option (read from file)
+    parser = argparse.ArgumentParser(description="Run a port scan or test credentials.")
+
+    # Honey Hornet switches
+    parser.add_argument('--config', help='Define which config file to use.')
+
+    # Credential Checker switches
+    # parser.add_argument(['-t', '--target'], dest='target', type='string', help='IP address to test')
+    # parser.add_argument(['-s', '--service'], dest='service', type='string', help='The protocol you want to check: FTP, SSH, TELNET, HTTP-XML')
+    # parser.add_argument(['-c', '--credentials'], dest='credentials', type='string', help='Credentials to test. Format= username:password ')
+    # parser.add_argument(['-h', '--http-port'], dest='http_port', type='int', help='HTTP port to test.')
+    args = parser.parse_args()
+
+    # credentials = args.credenitals.split(':')
 
     log_name = "logs/" + str(date.today()) + "_DEBUG.log"
     log_directory = os.path.dirname(log_name)
@@ -221,7 +233,12 @@ def main():
                         level=logging.DEBUG)
     
     hh = HoneyHornet()
-    cc = credentialchecker.CredentialChecker()
+    if args.config is None:
+        hh.load_configuration_file("configs/config.yml")
+    else:
+        hh.load_configuration_file(args.config)
+
+    cc = credentialchecker.CredentialChecker(hh.config)
 
     print "[*] Using default YAML config file..."
     target_hosts = hh.config['targets']
