@@ -12,7 +12,7 @@ resultsFormat:
   - json
 
 # Uncomment to do banner grabs on HTTP ports.
-bannerGrab: True
+bannerGrab: False
 
 # Ports to scan on each target.
 ports:
