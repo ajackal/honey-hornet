@@ -16,10 +16,10 @@ bannerGrab: False
 
 # Ports to scan on each target.
 ports:
-  #- 21
-  #- 22
-  #- 23
-  #- 2323
+  - 21
+  - 22
+  - 23
+  - 2323
   - 2332
   - 9191
   #- 9443
@@ -27,8 +27,8 @@ ports:
 # Users to test when running in Check Credentials mode.
 # need to implement a way to do a blank username and/or password
 users:
-  #- admin
-  #- root
+  - admin
+  - root
   - user
   - viewer
 
@@ -37,16 +37,16 @@ users:
 
 # Passwords to test when running in Check Credentials mode.
 passwords:
-  #- admin
-  #- camera
+  - admin
+  - camera
   - 12345
-  #- pass
+  - pass
   # - CenturyL1nk
   # - CentryL1nk
   # - QwestM0dem
 
   # Blank Password
-  #- ''
+  - ''
   
 # Path to list of targets for scanning.
 targets:
