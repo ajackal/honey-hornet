@@ -125,7 +125,7 @@ class HoneyHornet:
             with open(logfile_name, 'a') as log_file:
                 new_log = "##############  SCAN RESULTS  ##############\n"
                 log_file.write(new_log)
-                log_totals = "{0}\{1} = {2}%\n".format(live, total, round(percentage, 2)
+                log_totals = "{0}\{1} = {2}%\n".format(live, total, round(percentage, 2))
                 log_file.write(log_totals)
         except Exception as error:
             logging.exception("calculate_number_of_hosts\t{0}".format(error))
