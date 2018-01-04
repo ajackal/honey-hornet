@@ -79,9 +79,9 @@ class CredentialChecker(HoneyHornet):
         iteration through every credential combination.
         """
         # TODO: build in way to handle blank usernames and passwords
+        users = self.config['users']
+        passwords = self.config['passwords']
         try:
-            users = self.config['users']
-            passwords = self.config['passwords']
             credentials = list(itertools.product(users, passwords))
             logging.info('Credentials built successfully.')
             return credentials
@@ -101,18 +101,18 @@ class CredentialChecker(HoneyHornet):
         credentials are supplied. When the wrong credentials are supplied, the response is much more delayed.
         A 3 second timeout has been effective in differentiating between a successful and failed login attempt.
         """
+        self.CONNECTION_LOCK.acquire()
         service = "TELNET"
-        try:
-            self.CONNECTION_LOCK.acquire()
-            host = vulnerable_host.ip
-            logging.info('{0} set for {1} service'.format(host, service))
-            for credential in credentials:
-                user = str(credential[0])
-                password = str(credential[1])
-                logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
-                if self.verbose:
-                    print "[*] Testing Telnet connection on {0}...".format(host)
-                    print "[*] username: {0} password: {1} port: {2}".format(user, password, port)
+        host = vulnerable_host.ip
+        logging.info('{0} set for {1} service'.format(host, service))
+        for credential in credentials:
+            user = str(credential[0])
+            password = str(credential[1])
+            logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
+            if self.verbose:
+                print "[*] Testing Telnet connection on {0}...".format(host)
+                print "[*] username: {0} password: {1} port: {2}".format(user, password, port)
+            try:
                 t = telnetlib.Telnet(host, port, 15)
                 time.sleep(self.TIMER_DELAY)
                 t.write(user + "\r\n")
@@ -134,26 +134,26 @@ class CredentialChecker(HoneyHornet):
                     t.close()
                 else:
                     t.close()
-        except Exception as error:
-            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
-        except KeyboardInterrupt:
-            exit(0)
-        finally:
-            self.CONNECTION_LOCK.release()
+            except Exception as error:
+                logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
+            except KeyboardInterrupt:
+                exit(0)
+            finally:
+                self.CONNECTION_LOCK.release()
 
     def check_ftp_anon(self, vulnerable_host):
         """ Function checks the FTP service for anonymous log-ins and does an FTP banner grab """
+        self.CONNECTION_LOCK.acquire()
         ftp_anon = {'port': '21',
                     'user': 'Anonymous',
                     'password': 'none',
                     'service': 'FTP'
                     }
+        host = vulnerable_host.ip
+        logging.info('{0} set for {1} service'.format(host, ftp_anon['service']))
+        if self.verbose:
+            print "[*] Testing FTP connection on {0}...".format(host)
         try:
-            self.CONNECTION_LOCK.acquire()
-            host = vulnerable_host.ip
-            logging.info('{0} set for {1} service'.format(host, ftp_anon['service']))
-            if self.verbose:
-                print "[*] Testing FTP connection on {0}...".format(host)
             ftp_conn = FTP(host)
             ftp_conn.login()
             ftp_conn.quit()
@@ -174,40 +174,35 @@ class CredentialChecker(HoneyHornet):
 
     def check_ftp(self, vulnerable_host, credentials):
         """ Checks the host for FTP connection using username and password combinations """
+        self.CONNECTION_LOCK.acquire()
         port = "21"
         service = "FTP"
-        try:
-            self.CONNECTION_LOCK.acquire()
-            host = vulnerable_host.ip
-            logging.info('{0} set for {1} service'.format(host, service))
-            for credential in credentials:
-                user = str(credential[0])
-                password = str(credential[1])
-                logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
-                if self.verbose:
-                    print "[*] Testing FTP connection on {0}...".format(host)
-                try:
-                    ftp_conn = FTP()
-                    if ftp_conn.connect(host, 21, 1):
-                        ftp_welcome = ftp_conn.getwelcome()
-                        logging.info("{0} FTP server returned {1}".format(host, ftp_welcome))
-                        if self.verbose:
-                            print "[*] FTP server returned {0}".format(ftp_welcome)
-                        ftp_conn.login(user, password)
-                        ftp_conn.close()
-                        self.log_results(host, port, user, password, service)
-                        vulnerable_host.put_credentials(service, port, user, password)
-                    break
-                except Exception as error:
-                    logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
-                except KeyboardInterrupt:
-                    exit(0)
-        except Exception as error:
-            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
-        except KeyboardInterrupt:
-            exit(0)
-        finally:
-            self.CONNECTION_LOCK.release()
+        host = vulnerable_host.ip
+        logging.info('{0} set for {1} service'.format(host, service))
+        for credential in credentials:
+            user = str(credential[0])
+            password = str(credential[1])
+            logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
+            if self.verbose:
+                print "[*] Testing FTP connection on {0}...".format(host)
+            try:
+                ftp_conn = FTP()
+                if ftp_conn.connect(host, 21, 1):
+                    ftp_welcome = ftp_conn.getwelcome()
+                    logging.info("{0} FTP server returned {1}".format(host, ftp_welcome))
+                    if self.verbose:
+                        print "[*] FTP server returned {0}".format(ftp_welcome)
+                    ftp_conn.login(user, password)
+                    ftp_conn.close()
+                    self.log_results(host, port, user, password, service)
+                    vulnerable_host.put_credentials(service, port, user, password)
+                break
+            except Exception as error:
+                logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
+            except KeyboardInterrupt:
+                exit(0)
+            finally:
+                self.CONNECTION_LOCK.release()
 
     def check_ssh(self, vulnerable_host, credentials):
         """ Function tests the SSH service with all of the users and passwords given.
@@ -217,40 +212,35 @@ class CredentialChecker(HoneyHornet):
                 pxssh.pxssh(options={"StrictHostKeyChecking": "no", "HostKeyAlgorithms": "+ssh-dss"})
                 This will disable strict host checking and enable support for SSH-DSS working with most LEGACY SSH implementations.
          """
+        self.CONNECTION_LOCK.acquire()
         port = "22"
         service = "SSH"
-        try:
-            self.CONNECTION_LOCK.acquire()
-            host = vulnerable_host.ip
-            logging.info('{0} set for {1} service'.format(host, service))
-            if self.verbose:
-                print "[*] Testing SSH service on {0}...".format(host)
-            for credential in credentials:
-                try:
-                    user = str(credential[0])
-                    password = str(credential[1])
-                    logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
-                    # This works for up-to-date SSH servers:
-                    # ssh_conn = pxssh.pxssh()
-                    # Old SSH servers running "ssh-dss" needs this option instead:
-                    ssh_conn = pxssh.pxssh(options={"StrictHostKeyChecking": "no", "HostKeyAlgorithms": "+ssh-dss"})
-                    ssh_conn.login(host, user, password)
-                    self.log_results(host, port, user, password, service)
-                    vulnerable_host.put_credentials(service, port, user, password)
-                    ssh_conn.logout()
-                    ssh_conn.close()
-                except pxssh.EOF as EOF_error:
-                    logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, EOF_error))
-                except pxssh.ExceptionPxssh as error:
-                    logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
-                except KeyboardInterrupt:
-                    exit(0)
-        except threading.ThreadError as thread_error:
-            logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, thread_error))
-        except KeyboardInterrupt:
-            exit(0)
-        finally:
-            self.CONNECTION_LOCK.release()
+        host = vulnerable_host.ip
+        logging.info('{0} set for {1} service'.format(host, service))
+        if self.verbose:
+            print "[*] Testing SSH service on {0}...".format(host)
+        for credential in credentials:
+            user = str(credential[0])
+            password = str(credential[1])
+            logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
+            try:
+                # This works for up-to-date SSH servers:
+                # ssh_conn = pxssh.pxssh()
+                # Old SSH servers running "ssh-dss" needs this option instead:
+                ssh_conn = pxssh.pxssh(options={"StrictHostKeyChecking": "no", "HostKeyAlgorithms": "+ssh-dss"})
+                ssh_conn.login(host, user, password)
+                self.log_results(host, port, user, password, service)
+                vulnerable_host.put_credentials(service, port, user, password)
+                ssh_conn.logout()
+                ssh_conn.close()
+            except pxssh.EOF as EOF_error:
+                logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, EOF_error))
+            except pxssh.ExceptionPxssh as error:
+                logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
+            except KeyboardInterrupt:
+                exit(0)
+            finally:
+                self.CONNECTION_LOCK.release()
 
     # TODO: continue refining keyword arguments
     def banner_grab(self, vulnerable_host, ports=None, https=False):
@@ -262,10 +252,10 @@ class CredentialChecker(HoneyHornet):
             ports_to_check = set(self.http_ports) & set(vulnerable_host.ports)
         except vulnerable_host.DoesNotExist:
             host = str(vulnerable_host)
-            ports_to_check = set(ports.split(','))
+            ports_to_check = set(ports.split(',').strip())
         if self.verbose:
-            logging.info('{0} set for {1} service'.format(host, service))
-        print "[*] Grabbing banner from {0}".format(host)
+            print "[*] Grabbing banner from {0}".format(host)
+        logging.info('{0} set for {1} service'.format(host, service))
         try:
             for port in ports_to_check:
                 if https is True:
@@ -422,13 +412,10 @@ def main():
     start_time = datetime.now()
     # TODO: add resume option (read from file)
     parser = argparse.ArgumentParser(description="Check a host for login credentials.")
-    parser.add_argument(['-t', '--target'], dest='target', type='string', required=True,
-                        help='IP address to test')
-    parser.add_argument(['-s', '--service'], dest='service', type='string', required=True,
-                        help='The protocol you want to check: FTP, SSH, TELNET, HTTP-XML')
-    parser.add_argument(['-c', '--credentials'], dest='credentials', type='string', required=True,
-                        help='Credentials to test. Format= username:password ')
-    parser.add_argument(['-p', '--port'], dest='http_port', type='int', help='HTTP port to test.')
+    parser.add_argument('--target', required=True, help='IP address to test')
+    parser.add_argument('--service', required=True, help='The protocol you want to check: FTP, SSH, TELNET, HTTP-XML')
+    parser.add_argument('--credentials', required=True, help='Credentials to test. Format= username:password ')
+    parser.add_argument('--port', dest='http_port', type='int', help='HTTP port to test.')
     args = parser.parse_args()
 
     credentials = args.credenitals.split(':')
@@ -445,7 +432,7 @@ def main():
     elif args.service is 'TELNET':
         cc.check_telnet(args.target, 23, credentials)
     elif args.service is 'HTTP-XML':
-        cc.http_post_xml(args.target)
+        cc.http_post_xml(args.target, credentials)
     else:
         print "[!] Unknown service. Please use: FTP, SSH, TELNET, HTTP-XML"
 
