@@ -245,8 +245,8 @@ class CredentialChecker(HoneyHornet):
     # TODO: continue refining keyword arguments
     def banner_grab(self, vulnerable_host, ports=None, https=False):
         """ simple banner grab with HTTPLIB """
-        service = "HTTP-BANNER-GRAB"
         self.CONNECTION_LOCK.acquire()
+        service = "HTTP-BANNER-GRAB"
         try:
             host = vulnerable_host.ip
             ports_to_check = set(self.http_ports) & set(vulnerable_host.ports)
@@ -355,6 +355,7 @@ class CredentialChecker(HoneyHornet):
             else:
                 logging.exception("{0}\t{1}\t{2}".format(host, service, error))
         except KeyboardInterrupt:
+            self.CONNECTION_LOCK.release()
             exit(0)
         finally:
             self.CONNECTION_LOCK.release()
@@ -418,7 +419,7 @@ def main():
     parser.add_argument('--port', dest='http_port', type='int', help='HTTP port to test.')
     args = parser.parse_args()
 
-    credentials = args.credenitals.split(':')
+    credentials = args.credenitals.split(':').strip()
 
     log_name = str(date.today()) + " DEBUG.log"
     logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
