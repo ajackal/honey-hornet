@@ -47,7 +47,7 @@ class CredentialChecker(HoneyHornet):
         logfile_name = "logs/" + str(date.today()) + "_recovered_passwords.log"
         log_directory = os.path.dirname(logfile_name)
         if not os.path.exists(log_directory):
-            os.path.mkdir(log_directory)
+            os.mkdir(log_directory)
         event = " host={0}\tuser={1}\tpassword={2}   \tport={3}  \tprotocol={4}".format(colored(host, "green"),
                                                                                         colored(user, "red"),
                                                                                         colored(password, "red"),
@@ -253,7 +253,7 @@ class CredentialChecker(HoneyHornet):
             self.CONNECTION_LOCK.release()
 
     # TODO: continue refining keyword arguments
-    def banner_grab(self, vulnerable_host, **kwargs):
+    def banner_grab(self, vulnerable_host, ports=None, https=False):
         """ simple banner grab with HTTPLIB """
         service = "HTTP-BANNER-GRAB"
         self.CONNECTION_LOCK.acquire()
@@ -262,14 +262,13 @@ class CredentialChecker(HoneyHornet):
             ports_to_check = set(self.http_ports) & set(vulnerable_host.ports)
         except vulnerable_host.DoesNotExist:
             host = str(vulnerable_host)
-            if 'ports' in kwargs:
-                ports_to_check = set(kwargs[ports].split(','))
+            ports_to_check = set(ports.split(','))
         if self.verbose:
             logging.info('{0} set for {1} service'.format(host, service))
         print "[*] Grabbing banner from {0}".format(host)
         try:
             for port in ports_to_check:
-                if 'https' in kwargs is True:
+                if https is True:
                     conn = httplib.HTTPSConnection(host, port)
                 else:
                     conn = httplib.HTTPConnection(host, port)

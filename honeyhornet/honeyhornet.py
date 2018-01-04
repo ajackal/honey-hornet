@@ -67,7 +67,7 @@ class HoneyHornet:
         results_file = "reports/" + self.time_stamp + "_recovered_passwords.csv"
         log_directory = os.path.dirname(results_file)
         if not os.path.exists(log_directory):
-            os.path.mkdir(log_directory)
+            os.mkdir(log_directory)
         headers = "Time Stamp,IP Address,Service,Port,Username,Password\n"
         with open(results_file, 'a') as open_csv:
             open_csv.write(headers)
@@ -78,7 +78,7 @@ class HoneyHornet:
         results_file = "saves/" + self.time_stamp + "_saved_objects.json"
         log_directory = os.path.dirname(results_file)
         if not os.path.exists(log_directory):
-            os.path.mkdir(log_directory)
+            os.mkdir(log_directory)
         with open(results_file, 'a') as open_json_file:
             for host in self.vulnerable_hosts:
                 to_json = {'host': host.ip, 'ports': host.ports, 'credentials': host.credentials}
@@ -99,7 +99,7 @@ class HoneyHornet:
         logfile_name = "logs/" + str(date.today()) + "_open_ports.log"
         log_directory = os.path.dirname(logfile_name)
         if not os.path.exists(log_directory):
-            os.path.mkdir(log_directory)
+            os.mkdir(log_directory)
         event = " host={0}   \tport={1}  \tstatus={2}".format(colored(host, "green"),
                                                               colored(port, "green"),
                                                               colored(status, "green"))
@@ -211,35 +211,30 @@ def main():
     """ Main program """
     start_time = datetime.now()
     # TODO: add resume option (read from file)
-    parser = argparse.ArgumentParser(description="Run a port scan or test credentials.")
 
     # Honey Hornet switches
+    parser = argparse.ArgumentParser(description="Run a port scan or test credentials.")
     parser.add_argument('--config', help='Define which config file to use.')
-
-    # Credential Checker switches
-    # parser.add_argument(['-t', '--target'], dest='target', type='string', help='IP address to test')
-    # parser.add_argument(['-s', '--service'], dest='service', type='string', help='The protocol you want to check: FTP, SSH, TELNET, HTTP-XML')
-    # parser.add_argument(['-c', '--credentials'], dest='credentials', type='string', help='Credentials to test. Format= username:password ')
-    # parser.add_argument(['-h', '--http-port'], dest='http_port', type='int', help='HTTP port to test.')
     args = parser.parse_args()
 
-    # credentials = args.credenitals.split(':')
-
+    # Setup logging file path and formatting
     log_name = "logs/" + str(date.today()) + "_DEBUG.log"
     log_directory = os.path.dirname(log_name)
     if not os.path.exists(log_directory):
-        os.path.mkdir(log_directory)
+        os.mkdir(log_directory)
     logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
                         level=logging.DEBUG)
-    
+
+    # Instantiates HoneyHornet & loads the appropriate config file.
     hh = HoneyHornet()
     if args.config is None:
         hh.load_configuration_file("configs/config.yml")
     else:
         hh.load_configuration_file(args.config)
-
+    # Instantiates Credential Checker & loads the HoneyHornet config.
     cc = credentialchecker.CredentialChecker(hh.config)
 
+    # Setup local variables based on the config file.
     print "[*] Using default YAML config file..."
     target_hosts = hh.config['targets']
     ports_to_scan = hh.config['ports']
@@ -247,9 +242,11 @@ def main():
     banner = hh.config['bannerGrab']
     results_format = hh.config['resultsFormat']
 
+    # Enables banner grabbing if True in config.
     if banner is True:
         cc.add_banner_grab(banner)
 
+    # Selects the type of scan to run based on the config.
     service = "run_scan_type"
     try:
         if scan_type == '1':
