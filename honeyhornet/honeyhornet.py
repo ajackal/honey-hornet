@@ -59,9 +59,6 @@ class HoneyHornet:
             b = build_config.BuildConfig()
             self.load_configuration_file(self.default_config_filepath)
 
-    def add_banner_grab(self, banner):
-        self.banner = banner
-
     def write_results_to_csv(self):
         results_file = "reports/" + self.time_stamp + "_recovered_passwords.csv"
         log_directory = os.path.dirname(results_file)
@@ -243,7 +240,7 @@ def main():
 
     # Enables banner grabbing if True in config.
     if banner is True:
-        cc.add_banner_grab(banner)
+        cc.banner = banner
 
     # Selects the type of scan to run based on the config.
     service = "run_scan_type"
