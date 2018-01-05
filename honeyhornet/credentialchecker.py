@@ -1,8 +1,6 @@
-#! /usr/bin/env python
-
-from honeyhornet import HoneyHornet
 import os
 import argparse
+from threading import BoundedSemaphore
 import logging
 from datetime import date, datetime
 from termcolor import colored
@@ -16,7 +14,7 @@ import time
 import itertools
 
 
-class CredentialChecker(HoneyHornet):
+class CredentialChecker:
     """ CredentialChecker() defines all the methods to check each service for all the credentials defined. Right now the
     supported services are:
 
@@ -36,11 +34,17 @@ class CredentialChecker(HoneyHornet):
     that might be need to be adjusted.
     """
     def __init__(self, config):
-        HoneyHornet.__init__(self)
         # TODO: add/modify http_ports list
         self.http_ports = [8000, 8080, 8081, 8090, 9191, 9443]
         self.telnet_ports = [23, 2332]
         self.config = config
+        self.verbose = False
+        self.banner = False
+        MAX_CONNECTIONS = 20  # max threads that can be created
+        self.CONNECTION_LOCK = BoundedSemaphore(value=MAX_CONNECTIONS)
+        log_name = str(date.today()) + " DEBUG.log"
+        logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
+                        level=logging.DEBUG)
         
     def log_results(self, host, port, user, password, protocol):
         """ Logs credentials that are successfully recovered. """
@@ -54,8 +58,8 @@ class CredentialChecker(HoneyHornet):
                                                                                         port,
                                                                                         protocol)
         print "[*] Password recovered:{0}".format(event)
-        self.write_log_file(logfile_name, "\n")
-        self.write_log_file(logfile_name, event)
+        HoneyHornet.write_log_file(logfile_name, "\n")
+        HoneyHornet.write_log_file(logfile_name, event)
 
     def build_credentials(self):
         """ Function takes the usernames and passwords from the configuration file and constructs every possible
@@ -420,10 +424,6 @@ def main():
     args = parser.parse_args()
 
     credentials = args.credenitals.split(':').strip()
-
-    log_name = str(date.today()) + " DEBUG.log"
-    logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
-                        level=logging.DEBUG)
 
     if args.service is 'FTP':
         cc.check_ftp_anon(args.target)

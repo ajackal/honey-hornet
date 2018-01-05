@@ -1,5 +1,3 @@
-#! /usr/bin/env python
-
 import argparse
 import logging
 import os
@@ -7,9 +5,9 @@ import nmap
 import yaml
 import json
 from datetime import datetime, date
-from threading import BoundedSemaphore
+# from threading import BoundedSemaphore
 from termcolor import colored
-import credentialchecker
+from credentialchecker import CredentialChecker
 import build_config
 
 
@@ -40,14 +38,13 @@ class HoneyHornet:
 
     def __init__(self):
         self.live_hosts = []  # writes live hosts that are found here
-        MAX_CONNECTIONS = 20  # max threads that can be created
-        self.CONNECTION_LOCK = BoundedSemaphore(value=MAX_CONNECTIONS)
+        # MAX_CONNECTIONS = 20  # max threads that can be created
+        # self.CONNECTION_LOCK = BoundedSemaphore(value=MAX_CONNECTIONS)
         self.TIMER_DELAY = 3  # timer delay used for Telnet testing
         self.time_stamp = str(date.today())
         self.users = []  # users that will be tested
         self.passwords = []  # passwords to be tested
         self.verbose = False  # if there will be a verbose output, default=False
-        self.banner = False  # if we should do a banner grab, default=False
         self.default_config_filepath = "configs/config.yml"
         self.config = {}
 
@@ -232,10 +229,10 @@ def main():
             config_to_run = "configs/" + args.config
             hh.load_configuration_file(config_to_run)
     # Instantiates Credential Checker & loads the HoneyHornet config.
-    cc = credentialchecker.CredentialChecker(hh.config)
+    cc = CredentialChecker(hh.config)
 
     # Setup local variables based on the config file.
-    print "[*] Using {0} YAML config file...".format(colored(args.config, yellow))
+    print "[*] Using {0} YAML config file...".format(colored(args.config, 'yellow'))
     target_hosts = hh.config['targets']
     ports_to_scan = hh.config['ports']
     scan_type = str(hh.config['scanType']).strip('[]')
