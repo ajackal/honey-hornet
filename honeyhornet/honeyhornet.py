@@ -235,7 +235,7 @@ def main():
     cc = credentialchecker.CredentialChecker(hh.config)
 
     # Setup local variables based on the config file.
-    print "[*] Using {0} YAML config file...".format(args.config)
+    print "[*] Using {0} YAML config file...".format(colored(args.config, yellow))
     target_hosts = hh.config['targets']
     ports_to_scan = hh.config['ports']
     scan_type = str(hh.config['scanType']).strip('[]')
