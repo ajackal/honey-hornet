@@ -8,4 +8,4 @@
 *.json
 .idea/
 .vscode/
-configs/test.yml
+honeyhornet/configs/test.yml
