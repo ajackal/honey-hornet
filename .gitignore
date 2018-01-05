@@ -8,3 +8,4 @@
 *.json
 .idea/
 .vscode/
+configs/test.yml
