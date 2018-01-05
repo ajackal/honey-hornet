@@ -226,12 +226,16 @@ def main():
     if args.config is None:
         hh.load_configuration_file("configs/config.yml")
     else:
-        hh.load_configuration_file(args.config)
+        if "config/" in args.config:
+            hh.load_configuration_file(args.config)
+        else:
+            config_to_run = "configs/" + args.config
+            hh.load_configuration_file(config_to_run)
     # Instantiates Credential Checker & loads the HoneyHornet config.
     cc = credentialchecker.CredentialChecker(hh.config)
 
     # Setup local variables based on the config file.
-    print "[*] Using default YAML config file..."
+    print "[*] Using {0} YAML config file...".format(args.config)
     target_hosts = hh.config['targets']
     ports_to_scan = hh.config['ports']
     scan_type = str(hh.config['scanType']).strip('[]')
