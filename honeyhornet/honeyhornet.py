@@ -214,7 +214,7 @@ def main():
             config_to_run = "configs/" + args.config
             hh.load_configuration_file(config_to_run)
     # Instantiates Credential Checker & loads the HoneyHornet config.
-    cc = CredentialChecker(hh.config)
+    cc = CredentialChecker(config=hh.config)
 
     # Setup local variables based on the config file.
     print "[*] Using {0} YAML config file...".format(colored(args.config, 'yellow'))

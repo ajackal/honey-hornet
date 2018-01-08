@@ -34,7 +34,7 @@ class CredentialChecker(HoneyHornetLogger):
     threads that can be run in parallel is defined in the HoneyHornet class (default=20) but depending on the hardware
     that might be need to be adjusted.
     """
-    def __init__(self, config):
+    def __init__(self, config=None):
         HoneyHornetLogger.__init__(self)
         # TODO: add/modify http_ports list
         self.http_ports = [8000, 8080, 8081, 8090, 9191, 9443]
@@ -144,8 +144,7 @@ class CredentialChecker(HoneyHornetLogger):
                 logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
             except KeyboardInterrupt:
                 exit(0)
-            finally:
-                self.CONNECTION_LOCK.release()
+        self.CONNECTION_LOCK.release()
 
     def check_ftp_anon(self, vulnerable_host):
         """
@@ -181,8 +180,7 @@ class CredentialChecker(HoneyHornetLogger):
             logging.exception("{0}\t{1}\t{2}\t{3}".format(host, ftp_anon['port'], ftp_anon['service'], error))
         except KeyboardInterrupt:
             exit(0)
-        finally:
-            self.CONNECTION_LOCK.release()
+        self.CONNECTION_LOCK.release()
 
     def check_ftp(self, vulnerable_host, credentials):
         """ Checks the host for FTP connection using username and password combinations """
@@ -213,8 +211,7 @@ class CredentialChecker(HoneyHornetLogger):
                 logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
             except KeyboardInterrupt:
                 exit(0)
-            finally:
-                self.CONNECTION_LOCK.release()
+        self.CONNECTION_LOCK.release()
 
     def check_ssh(self, vulnerable_host, credentials):
         """ Function tests the SSH service with all of the users and passwords given.
@@ -252,8 +249,7 @@ class CredentialChecker(HoneyHornetLogger):
                 logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
             except KeyboardInterrupt:
                 exit(0)
-            finally:
-                self.CONNECTION_LOCK.release()
+        self.CONNECTION_LOCK.release()
 
     def banner_grab(self, vulnerable_host, ports=None, https=False):
         """ simple banner grab with HTTPLIB """
@@ -296,8 +292,7 @@ class CredentialChecker(HoneyHornetLogger):
             logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
         except KeyboardInterrupt:
             exit(0)
-        finally:
-            self.CONNECTION_LOCK.release()
+        self.CONNECTION_LOCK.release()
 
     def http_post_xml(self, vulnerable_host, credentials):
         """ Tests for default credentials against an Web-based Authentication
@@ -369,8 +364,7 @@ class CredentialChecker(HoneyHornetLogger):
         except KeyboardInterrupt:
             self.CONNECTION_LOCK.release()
             exit(0)
-        finally:
-            self.CONNECTION_LOCK.release()
+        self.CONNECTION_LOCK.release()
 
     def run_credential_test(self, hosts_to_check):
         """ Function tests hosts for default credentials on open 'admin' ports
@@ -416,8 +410,8 @@ class CredentialChecker(HoneyHornetLogger):
             exit(0)
         except threading.ThreadError as error:
             logging.exception("{0}\t{1}".format(service, error))
-        except Exception:
-            raise
+        except Exception as e:
+            logging.exception(e)
 
 
 def main():
