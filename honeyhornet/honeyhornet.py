@@ -1,5 +1,3 @@
-#! /usr/bin/env python
-
 import argparse
 import logging
 import os
@@ -7,13 +5,14 @@ import nmap
 import yaml
 import json
 from datetime import datetime, date
-from threading import BoundedSemaphore
+# from threading import BoundedSemaphore
 from termcolor import colored
-import credentialchecker
+from credentialchecker import CredentialChecker
+from honeyhornetlogger import HoneyHornetLogger
 import build_config
 
 
-class HoneyHornet:
+class HoneyHornet(HoneyHornetLogger):
     """ Main Honey Hornet Class
 
     Holds all vulnerable hosts that are identified by the NMAP scan.
@@ -39,15 +38,15 @@ class HoneyHornet:
     vulnerable_hosts = []  # hosts that have open admin ports
 
     def __init__(self):
+        HoneyHornetLogger.__init__(self)
         self.live_hosts = []  # writes live hosts that are found here
-        MAX_CONNECTIONS = 20  # max threads that can be created
-        self.CONNECTION_LOCK = BoundedSemaphore(value=MAX_CONNECTIONS)
-        self.TIMER_DELAY = 3  # timer delay used for Telnet testing
+        # MAX_CONNECTIONS = 20  # max threads that can be created
+        # self.CONNECTION_LOCK = BoundedSemaphore(value=MAX_CONNECTIONS)
+        # self.TIMER_DELAY = 3  # timer delay used for Telnet testing
         self.time_stamp = str(date.today())
         self.users = []  # users that will be tested
         self.passwords = []  # passwords to be tested
         self.verbose = False  # if there will be a verbose output, default=False
-        self.banner = False  # if we should do a banner grab, default=False
         self.default_config_filepath = "configs/config.yml"
         self.config = {}
 
@@ -80,15 +79,6 @@ class HoneyHornet:
                 to_json = {'host': host.ip, 'ports': host.ports, 'credentials': host.credentials}
                 open_json_file.write(json.dumps(to_json))
                 open_json_file.write("\n")
-
-    @staticmethod
-    def write_log_file(logfile_name, event):
-        """ Writes the event to the proper log file """
-        time_now = datetime.now()
-        with open(logfile_name, 'a') as log_file:
-            if "\n" not in event:
-                log_file.write(str(time_now))
-            log_file.write(event)
 
     def log_open_port(self, host, port, status):
         """ Logs any host with an open port to a file. """
@@ -213,14 +203,6 @@ def main():
     parser.add_argument('--config', help='Define which config file to use.')
     args = parser.parse_args()
 
-    # Setup logging file path and formatting
-    log_name = "logs/" + str(date.today()) + "_DEBUG.log"
-    log_directory = os.path.dirname(log_name)
-    if not os.path.exists(log_directory):
-        os.mkdir(log_directory)
-    logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
-                        level=logging.DEBUG)
-
     # Instantiates HoneyHornet & loads the appropriate config file.
     hh = HoneyHornet()
     if args.config is None:
@@ -232,10 +214,10 @@ def main():
             config_to_run = "configs/" + args.config
             hh.load_configuration_file(config_to_run)
     # Instantiates Credential Checker & loads the HoneyHornet config.
-    cc = credentialchecker.CredentialChecker(hh.config)
+    cc = CredentialChecker(config=hh.config)
 
     # Setup local variables based on the config file.
-    print "[*] Using {0} YAML config file...".format(colored(args.config, yellow))
+    print "[*] Using {0} YAML config file...".format(colored(args.config, 'yellow'))
     target_hosts = hh.config['targets']
     ports_to_scan = hh.config['ports']
     scan_type = str(hh.config['scanType']).strip('[]')

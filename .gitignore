@@ -3,7 +3,6 @@
 *.txt
 *.bak
 *.swp
-*.pyc
 *.csv
 *.json
 .idea/
