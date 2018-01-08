@@ -1,5 +1,6 @@
 import os
 import argparse
+from honeyhornetlogger import HoneyHornetLogger
 from threading import BoundedSemaphore
 import logging
 from datetime import date, datetime
@@ -14,7 +15,7 @@ import time
 import itertools
 
 
-class CredentialChecker:
+class CredentialChecker(HoneyHornetLogger):
     """ CredentialChecker() defines all the methods to check each service for all the credentials defined. Right now the
     supported services are:
 
@@ -34,6 +35,7 @@ class CredentialChecker:
     that might be need to be adjusted.
     """
     def __init__(self, config):
+        HoneyHornetLogger.__init__(self)
         # TODO: add/modify http_ports list
         self.http_ports = [8000, 8080, 8081, 8090, 9191, 9443]
         self.telnet_ports = [23, 2332]
@@ -42,9 +44,10 @@ class CredentialChecker:
         self.banner = False
         MAX_CONNECTIONS = 20  # max threads that can be created
         self.CONNECTION_LOCK = BoundedSemaphore(value=MAX_CONNECTIONS)
+        self.TIMER_DELAY = 3  # timer delay used for Telnet testing
         log_name = str(date.today()) + " DEBUG.log"
         logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
-                        level=logging.DEBUG)
+                            level=logging.DEBUG)
         
     def log_results(self, host, port, user, password, protocol):
         """ Logs credentials that are successfully recovered. """
@@ -58,8 +61,8 @@ class CredentialChecker:
                                                                                         port,
                                                                                         protocol)
         print "[*] Password recovered:{0}".format(event)
-        HoneyHornet.write_log_file(logfile_name, "\n")
-        HoneyHornet.write_log_file(logfile_name, event)
+        self.write_log_file(logfile_name, "\n")
+        self.write_log_file(logfile_name, event)
 
     def build_credentials(self):
         """ Function takes the usernames and passwords from the configuration file and constructs every possible
@@ -82,7 +85,6 @@ class CredentialChecker:
         Then each username can be accessed with credentials[0] and each password with credentials[1]. Simplifies the
         iteration through every credential combination.
         """
-        # TODO: build in way to handle blank usernames and passwords
         users = self.config['users']
         passwords = self.config['passwords']
         try:
@@ -146,7 +148,13 @@ class CredentialChecker:
                 self.CONNECTION_LOCK.release()
 
     def check_ftp_anon(self, vulnerable_host):
-        """ Function checks the FTP service for anonymous log-ins and does an FTP banner grab """
+        """
+        Function checks the FTP service for anonymous log-ins and does an FTP banner grab
+
+        check_ftp_anon(vulnerable_host)
+
+        vulnerable_host = IP address you want to check.
+        """
         self.CONNECTION_LOCK.acquire()
         ftp_anon = {'port': '21',
                     'user': 'Anonymous',
@@ -214,7 +222,8 @@ class CredentialChecker:
         1. pxssh.pxssh() works for up-to-date implementations of OpenSSLs SSH.
         2. If testing against LEGACY SSH implementations you need to add several options to handle it properly:
                 pxssh.pxssh(options={"StrictHostKeyChecking": "no", "HostKeyAlgorithms": "+ssh-dss"})
-                This will disable strict host checking and enable support for SSH-DSS working with most LEGACY SSH implementations.
+                This will disable strict host checking and enable support for SSH-DSS working with most
+                LEGACY SSH implementations.
          """
         self.CONNECTION_LOCK.acquire()
         port = "22"
@@ -246,7 +255,6 @@ class CredentialChecker:
             finally:
                 self.CONNECTION_LOCK.release()
 
-    # TODO: continue refining keyword arguments
     def banner_grab(self, vulnerable_host, ports=None, https=False):
         """ simple banner grab with HTTPLIB """
         self.CONNECTION_LOCK.acquire()
