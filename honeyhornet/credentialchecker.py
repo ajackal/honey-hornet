@@ -45,24 +45,24 @@ class CredentialChecker(HoneyHornetLogger):
         MAX_CONNECTIONS = 20  # max threads that can be created
         self.CONNECTION_LOCK = BoundedSemaphore(value=MAX_CONNECTIONS)
         self.TIMER_DELAY = 3  # timer delay used for Telnet testing
-        log_name = "../logs/" + str(date.today()) + " DEBUG.log"
+        self.default_filepath = os.path.dirname(os.getcwd())
+        log_name = str(date.today()) + "_DEBUG.log"
+        log_name = os.path.join(self.default_filepath, "logs", log_name)
         logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
                             level=logging.DEBUG)
         
     def log_results(self, host, port, user, password, protocol):
         """ Logs credentials that are successfully recovered. """
-        logfile_name = "../logs/" + str(date.today()) + "_recovered_passwords.log"
-        log_directory = os.path.dirname(logfile_name)
-        if not os.path.exists(log_directory):
-            os.mkdir(log_directory)
+        logfile_name = str(date.today()) + "_recovered_passwords.log"
+        log_directory = os.path.join(self.default_filepath, "logs", logfile_name)
         event = " host={0}\tuser={1}\tpassword={2}   \tport={3}  \tprotocol={4}".format(colored(host, "green"),
                                                                                         colored(user, "red"),
                                                                                         colored(password, "red"),
                                                                                         port,
                                                                                         protocol)
         print "[*] Password recovered:{0}".format(event)
-        self.write_log_file(logfile_name, "\n")
-        self.write_log_file(logfile_name, event)
+        self.write_log_file(log_directory, "\n")
+        self.write_log_file(log_directory, event)
 
     def build_credentials(self):
         """ Function takes the usernames and passwords from the configuration file and constructs every possible
@@ -155,7 +155,8 @@ class CredentialChecker(HoneyHornetLogger):
         vulnerable_host = IP address you want to check.
         """
         self.CONNECTION_LOCK.acquire()
-        ftp_anon = {'port': '21',
+        ftp_anon = {
+                    'port': '21',
                     'user': 'Anonymous',
                     'password': 'none',
                     'service': 'FTP'
@@ -278,7 +279,8 @@ class CredentialChecker(HoneyHornetLogger):
                     print http_r1.status, http_r1.reason
                 # puts banner into the class instance of the host
                 vulnerable_host.put_banner(port, banner_txt, http_r1.status, http_r1.reason, headers)
-                banner_grab_filename = str(date.today()) + " banner_grabs.log"
+                banner_grab_filename = str(date.today()) + "_banner_grabs.log"
+                banner_grab_filename = os.path.join(self.default_filepath, "logs", banner_grab_filename)
                 with open(banner_grab_filename, 'a') as banner_log:
                     banner_to_log = "host={0}, http_port={1},\nheaders={2},\nbanner={3}\n".format(host, port,
                                                                                                   headers, banner_txt)
@@ -314,7 +316,7 @@ class CredentialChecker(HoneyHornetLogger):
                    "X-Requested-With": "XMLHttpRequest",
                    "Connection": "close"}
 
-        xml_connect_path = "../xml/Connect.xml"
+        xml_connect_path = os.path.join(self.default_filepath, "xml", "Connect.xml")
 
         def read_xml(xml_file):
             """ Reads the XML file to put in body of request """

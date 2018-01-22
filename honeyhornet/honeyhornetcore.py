@@ -5,7 +5,6 @@ import nmap
 import yaml
 import json
 from datetime import datetime, date
-# from threading import BoundedSemaphore
 from termcolor import colored
 from credentialchecker import CredentialChecker
 from honeyhornetlogger import HoneyHornetLogger
@@ -40,14 +39,12 @@ class HoneyHornet(HoneyHornetLogger):
     def __init__(self):
         HoneyHornetLogger.__init__(self)
         self.live_hosts = []  # writes live hosts that are found here
-        # MAX_CONNECTIONS = 20  # max threads that can be created
-        # self.CONNECTION_LOCK = BoundedSemaphore(value=MAX_CONNECTIONS)
-        # self.TIMER_DELAY = 3  # timer delay used for Telnet testing
         self.time_stamp = str(date.today())
         self.users = []  # users that will be tested
         self.passwords = []  # passwords to be tested
         self.verbose = False  # if there will be a verbose output, default=False
-        self.default_config_filepath = "../configs/config.yml"
+        self.default_filepath = os.path.dirname(os.getcwd())
+        self.default_config_filepath = os.path.join(self.default_filepath, "configs", "config.yml")
         self.config = {}
 
     def load_configuration_file(self, yml_config):
@@ -59,10 +56,8 @@ class HoneyHornet(HoneyHornetLogger):
             self.load_configuration_file(self.default_config_filepath)
 
     def write_results_to_csv(self):
-        results_file = "../reports/" + self.time_stamp + "_recovered_passwords.csv"
-        log_directory = os.path.dirname(results_file)
-        if not os.path.exists(log_directory):
-            os.mkdir(log_directory)
+        results_file = self.time_stamp + "_recovered_passwords.csv"
+        results_file = os.path.join(self.default_filepath, "reports", results_file)
         headers = "Time Stamp,IP Address,Service,Port,Username,Password\n"
         with open(results_file, 'a') as open_csv:
             open_csv.write(headers)
@@ -70,10 +65,8 @@ class HoneyHornet(HoneyHornetLogger):
                 host.get_credentials(open_csv)
 
     def write_results_to_json(self):
-        results_file = "../saves/" + self.time_stamp + "_saved_objects.json"
-        log_directory = os.path.dirname(results_file)
-        if not os.path.exists(log_directory):
-            os.mkdir(log_directory)
+        results_file = self.time_stamp + "_saved_objects.json"
+        results_file = os.path.join(self.default_filepath, "saves", results_file)
         with open(results_file, 'a') as open_json_file:
             for host in self.vulnerable_hosts:
                 to_json = {'host': host.ip, 'ports': host.ports, 'credentials': host.credentials}
@@ -82,10 +75,8 @@ class HoneyHornet(HoneyHornetLogger):
 
     def log_open_port(self, host, port, status):
         """ Logs any host with an open port to a file. """
-        logfile_name = "../logs/" + str(date.today()) + "_open_ports.log"
-        log_directory = os.path.dirname(logfile_name)
-        if not os.path.exists(log_directory):
-            os.mkdir(log_directory)
+        logfile_name = str(date.today()) + "_open_ports.log"
+        logfile_name = os.path.join(self.default_filepath, "logs", logfile_name)
         event = " host={0}   \tport={1}  \tstatus={2}".format(colored(host, "green"),
                                                               colored(port, "green"),
                                                               colored(status, "green"))
@@ -106,8 +97,9 @@ class HoneyHornet(HoneyHornetLogger):
                 total = len(open_target_list.readlines())
             live = len(self.vulnerable_hosts)
             percentage = 100 * (float(live) / float(total))
-            print "[+] {0} out of {1} hosts are vulnerable or {2}%".format(live, total, percentage)
-            logfile_name = "../logs/" + str(date.today()) + "_open_ports.log"
+            print "[+] {0} out of {1} hosts are vulnerable or {2}%".format(live, total, round(percentage, 2))
+            logfile_name = str(date.today()) + "_open_ports.log"
+            logfile_name = os.path.join(self.default_filepath, "logs", logfile_name)
             with open(logfile_name, 'a') as log_file:
                 new_log = "##############  SCAN RESULTS  ##############\n"
                 log_file.write(new_log)
@@ -133,7 +125,7 @@ class HoneyHornet(HoneyHornetLogger):
         try:
             scanner = nmap.PortScanner()  # defines port scanner function
             print "[*] checking for open admin ports..."
-            targets = '-iL ../' + str(target_list).strip('[]')
+            targets = '-iL ' + os.path.join(self.default_filepath, "targets", str(target_list).strip('[]'))
             ports = ' -p ' + str(ports_to_scan).strip('[]').replace(' ', '')
             scanner.scan(hosts=targets, arguments=ports)  # Nmap scan command
             hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
@@ -210,12 +202,12 @@ def main():
     # Instantiates HoneyHornet & loads the appropriate config file.
     hh = HoneyHornet()
     if args.config is None:
-        hh.load_configuration_file("../configs/config.yml")
+        hh.load_configuration_file(os.path.join(hh.default_filepath, "configs", "config.yml"))
     else:
         if "config/" in args.config:
             hh.load_configuration_file(args.config)
         else:
-            config_to_run = "../configs/" + args.config
+            config_to_run = os.path.join(hh.default_filepath, "configs", args.config)
             hh.load_configuration_file(config_to_run)
     # Instantiates Credential Checker & loads the HoneyHornet config.
     cc = CredentialChecker(config=hh.config)
