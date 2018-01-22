@@ -45,13 +45,13 @@ class CredentialChecker(HoneyHornetLogger):
         MAX_CONNECTIONS = 20  # max threads that can be created
         self.CONNECTION_LOCK = BoundedSemaphore(value=MAX_CONNECTIONS)
         self.TIMER_DELAY = 3  # timer delay used for Telnet testing
-        log_name = str(date.today()) + " DEBUG.log"
+        log_name = "../logs/" + str(date.today()) + " DEBUG.log"
         logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
                             level=logging.DEBUG)
         
     def log_results(self, host, port, user, password, protocol):
         """ Logs credentials that are successfully recovered. """
-        logfile_name = "logs/" + str(date.today()) + "_recovered_passwords.log"
+        logfile_name = "../logs/" + str(date.today()) + "_recovered_passwords.log"
         log_directory = os.path.dirname(logfile_name)
         if not os.path.exists(log_directory):
             os.mkdir(log_directory)
@@ -314,7 +314,7 @@ class CredentialChecker(HoneyHornetLogger):
                    "X-Requested-With": "XMLHttpRequest",
                    "Connection": "close"}
 
-        xml_connect_path = "xml/Connect.xml"
+        xml_connect_path = "../xml/Connect.xml"
 
         def read_xml(xml_file):
             """ Reads the XML file to put in body of request """
