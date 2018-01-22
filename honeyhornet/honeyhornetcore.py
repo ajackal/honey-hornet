@@ -59,7 +59,7 @@ class HoneyHornet(HoneyHornetLogger):
             self.load_configuration_file(self.default_config_filepath)
 
     def write_results_to_csv(self):
-        results_file = "reports/" + self.time_stamp + "_recovered_passwords.csv"
+        results_file = "../reports/" + self.time_stamp + "_recovered_passwords.csv"
         log_directory = os.path.dirname(results_file)
         if not os.path.exists(log_directory):
             os.mkdir(log_directory)
@@ -70,7 +70,7 @@ class HoneyHornet(HoneyHornetLogger):
                 host.get_credentials(open_csv)
 
     def write_results_to_json(self):
-        results_file = "saves/" + self.time_stamp + "_saved_objects.json"
+        results_file = "../saves/" + self.time_stamp + "_saved_objects.json"
         log_directory = os.path.dirname(results_file)
         if not os.path.exists(log_directory):
             os.mkdir(log_directory)
@@ -82,7 +82,7 @@ class HoneyHornet(HoneyHornetLogger):
 
     def log_open_port(self, host, port, status):
         """ Logs any host with an open port to a file. """
-        logfile_name = "logs/" + str(date.today()) + "_open_ports.log"
+        logfile_name = "../logs/" + str(date.today()) + "_open_ports.log"
         log_directory = os.path.dirname(logfile_name)
         if not os.path.exists(log_directory):
             os.mkdir(log_directory)
@@ -107,7 +107,7 @@ class HoneyHornet(HoneyHornetLogger):
             live = len(self.vulnerable_hosts)
             percentage = 100 * (float(live) / float(total))
             print "[+] {0} out of {1} hosts are vulnerable or {2}%".format(live, total, percentage)
-            logfile_name = "logs/" + str(date.today()) + "_open_ports.log"
+            logfile_name = "../logs/" + str(date.today()) + "_open_ports.log"
             with open(logfile_name, 'a') as log_file:
                 new_log = "##############  SCAN RESULTS  ##############\n"
                 log_file.write(new_log)
@@ -133,7 +133,7 @@ class HoneyHornet(HoneyHornetLogger):
         try:
             scanner = nmap.PortScanner()  # defines port scanner function
             print "[*] checking for open admin ports..."
-            targets = '-iL ' + str(target_list).strip('[]')
+            targets = '-iL ../' + str(target_list).strip('[]')
             ports = ' -p ' + str(ports_to_scan).strip('[]').replace(' ', '')
             scanner.scan(hosts=targets, arguments=ports)  # Nmap scan command
             hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
@@ -221,7 +221,10 @@ def main():
     cc = CredentialChecker(config=hh.config)
 
     # Setup local variables based on the config file.
-    print "[*] Using {0} YAML config file...".format(colored(args.config, 'yellow'))
+    if args.config:
+        print "[*] Using {0} YAML config file...".format(colored(args.config, 'yellow'))
+    else:
+        print "[*] Using {0} YAML config file...".format(colored('default', 'yellow'))
     target_hosts = hh.config['targets']
     ports_to_scan = hh.config['ports']
     scan_type = str(hh.config['scanType']).strip('[]')

@@ -54,6 +54,6 @@ targets:
   # - ~/path/to/target_list.txt
   # As long as the file is in the same folder, works fine.
   #- targets/lab_targets.txt
-  - ../targets/full_target_list.txt
+  - targets/full_target_list.txt
   # - devtest.txt
   # - targets.txt
