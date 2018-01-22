@@ -5,8 +5,10 @@ from datetime import date, datetime
 
 class HoneyHornetLogger:
     def __init__(self):
-        # Setup logging file path and formatting
-        log_name = "../logs/" + str(date.today()) + "_DEBUG.log"
+        """ Setup logging file path and formatting """
+        self.default_filepath = os.path.dirname(os.getcwd())
+        log_name = str(date.today()) + "_DEBUG.log"
+        log_name = os.path.join(self.default_filepath, "logs", log_name)
         log_directory = os.path.dirname(log_name)
         if not os.path.exists(log_directory):
             os.mkdir(log_directory)
