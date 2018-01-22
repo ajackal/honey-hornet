@@ -5,6 +5,7 @@
 *.swp
 *.csv
 *.json
+*.pyc
 .idea/
 .vscode/
 honeyhornet/configs/test.yml

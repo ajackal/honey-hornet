@@ -47,7 +47,7 @@ class HoneyHornet(HoneyHornetLogger):
         self.users = []  # users that will be tested
         self.passwords = []  # passwords to be tested
         self.verbose = False  # if there will be a verbose output, default=False
-        self.default_config_filepath = "configs/config.yml"
+        self.default_config_filepath = "../configs/config.yml"
         self.config = {}
 
     def load_configuration_file(self, yml_config):
@@ -148,6 +148,10 @@ class HoneyHornet(HoneyHornetLogger):
                         if port_state == 'open':  # checks to see if status is open
                             new_host.add_vulnerable_port(port)
                             self.log_open_port(host, port, port_state)
+        except PortScannerError as error:
+            print "[!] Error running port scanner, check target list path."
+            logging.exception("{0}\t{1}".format(service, error))
+            exit(0)
         except Exception as error:
             logging.exception("{0}\t{1}".format(service, error))
         except KeyboardInterrupt:
@@ -206,12 +210,12 @@ def main():
     # Instantiates HoneyHornet & loads the appropriate config file.
     hh = HoneyHornet()
     if args.config is None:
-        hh.load_configuration_file("configs/config.yml")
+        hh.load_configuration_file("../configs/config.yml")
     else:
         if "config/" in args.config:
             hh.load_configuration_file(args.config)
         else:
-            config_to_run = "configs/" + args.config
+            config_to_run = "../configs/" + args.config
             hh.load_configuration_file(config_to_run)
     # Instantiates Credential Checker & loads the HoneyHornet config.
     cc = CredentialChecker(config=hh.config)
