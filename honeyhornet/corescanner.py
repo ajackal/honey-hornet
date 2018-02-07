@@ -109,7 +109,6 @@ class HoneyHornet(HoneyHornetLogger):
 
     def calculate_total_number_of_hosts(self, target_list):
         target_list = str(target_list).strip("['']")
-        print target_list, len(target_list)
         target_list = os.path.join(self.default_filepath, "targets", target_list)
         with open(target_list, 'r') as open_target_list:
             return len(open_target_list.readlines())
@@ -123,7 +122,7 @@ class HoneyHornet(HoneyHornetLogger):
             total = self.calculate_total_number_of_hosts(target_list)
             live = len(self.vulnerable_hosts)
             percentage = 100 * (float(live) / float(total))
-            print "[+] {0} out of {1} hosts are vulnerable or {2}%".format(live, total, round(percentage, 2))
+            print "\n[+] {0} out of {1} hosts are vulnerable or {2}%".format(live, total, round(percentage, 2))
             logfile_name = str(date.today()) + "_open_ports.log"
             logfile_name = os.path.join(self.default_filepath, "logs", logfile_name)
             with open(logfile_name, 'a') as log_file:
@@ -133,6 +132,15 @@ class HoneyHornet(HoneyHornetLogger):
                 log_file.write(log_totals)
         except Exception as error:
             logging.exception("calculate_number_of_hosts\t{0}".format(error))
+
+    def create_new_vulnerable_host(self, host, ports):
+        new_host = VulnerableHost(host[0])  # creates new object
+        self.vulnerable_hosts.append(new_host)
+        for port in ports:
+            port_state = port[1]['state']  # defines port state variable
+            if port_state == 'open':  # checks to see if status is open
+                new_host.add_vulnerable_port(port[0])
+                self.log_open_port(host[0], port[0], port_state)
 
     def check_admin_ports(self, target_list, ports_to_scan):
         """Scans for a live host and for any open common admin ports defined in the configuration file.
@@ -153,27 +161,22 @@ class HoneyHornet(HoneyHornetLogger):
             print "[*] checking for open admin ports..."
             targets = '-iL ' + os.path.join(self.default_filepath, "targets", str(target_list).strip('[]'))
             ports = ' -p ' + str(ports_to_scan).strip('[]').replace(' ', '')
+            total_hosts = self.calculate_total_number_of_hosts(target_list)
             counter = 0
             for host in scanner.scan(hosts=targets, arguments=ports): # Nmap scan command
-                total_hosts = self.calculate_total_number_of_hosts(target_list)
+                counter += 1
                 percentage = float(counter) / float(total_hosts) * 100.0
                 percentage = int(percentage)
                 sys.stdout.write('\r')
                 sys.stdout.write("[%-100s] %d%% Currently on %s" % ('='*percentage, percentage, host[0]))
                 sys.stdout.flush()
-                counter += 1
             # hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
             # for host, status in hosts_list:
-                ports = host['tcp'].keys()  # retrieves tcp port results from scan
-                if ports:
-                    ports.sort()  # sorts ports
-                    new_host = VulnerableHost(host)  # creates new object
-                    self.vulnerable_hosts.append(new_host)
-                    for port in ports:
-                        port_state = host['tcp'][port]['state']  # defines port state variable
-                        if port_state == 'open':  # checks to see if status is open
-                            new_host.add_vulnerable_port(port)
-                            self.log_open_port(host, port, port_state)
+                try:
+                    ports = host[1]['scan'][host[0]]['tcp'].viewitems()  # retrieves tcp port results from scan
+                    self.create_new_vulnerable_host(host, ports)
+                except KeyError:
+                    continue
         # except scanner.PortScannerError as error:
         #     print "[!] Error running port scanner, check target list path."
         #     logging.exception("{0}\t{1}".format(service, error))
