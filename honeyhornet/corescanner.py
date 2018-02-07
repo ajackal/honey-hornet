@@ -1,12 +1,14 @@
 import argparse
 import logging
 import os
+import sys
 import nmap
 import yaml
 import json
 from datetime import datetime, date
 from termcolor import colored
 from credentialchecker import CredentialChecker
+from viewchecker import ViewChecker
 from logger import HoneyHornetLogger
 import buildconfig
 
@@ -91,19 +93,26 @@ class HoneyHornet(HoneyHornetLogger):
         event = " host={0}   \tport={1}  \tstatus={2}".format(colored(host, "green"),
                                                               colored(port, "green"),
                                                               colored(status, "green"))
-        print "[*] Open port found:{0}".format(event)
+        if self.verbose:
+            print "[*] Open port found:{0}".format(event)
         self.write_log_file(logfile_name, event)
         self.write_log_file(logfile_name, "\n")
 
     # TODO: Add INFO level logging
-    def show_scan_progress():
-        for i in xrange(21):
-        sys.stdout.write('\r')
-        sys.stdout.write("[%-40s] %d%%" % ('='*i*2, 5*i))
-        sys.stdout.flush()
-        sleep(0.25)    
-    [========================================] 100%
+    # def show_scan_progress():
+    #     for i in xrange(21):
+    #         sys.stdout.write('\r')
+    #         sys.stdout.write("[%-40s] %d%%" % ('='*i*2, 5*i))
+    #         sys.stdout.flush()
+    #         sleep(0.25)    
+    # [========================================] 100%
 
+    def calculate_total_number_of_hosts(self, target_list):
+        target_list = str(target_list).strip("['']")
+        print target_list, len(target_list)
+        target_list = os.path.join(self.default_filepath, "targets", target_list)
+        with open(target_list, 'r') as open_target_list:
+            return len(open_target_list.readlines())
 
     def calculate_number_of_hosts(self, target_list):
         """ Function scans the list or CIDR block to see which hosts are alive
@@ -111,9 +120,7 @@ class HoneyHornet(HoneyHornetLogger):
         also calculates the percentage of how many hosts are alive
         """
         try:
-            # TODO: check the target_list, if string, .split(','), else just len()
-            with open(str(target_list).strip("['']"), 'r') as open_target_list:
-                total = len(open_target_list.readlines())
+            total = self.calculate_total_number_of_hosts(target_list)
             live = len(self.vulnerable_hosts)
             percentage = 100 * (float(live) / float(total))
             print "[+] {0} out of {1} hosts are vulnerable or {2}%".format(live, total, round(percentage, 2))
@@ -142,27 +149,35 @@ class HoneyHornet(HoneyHornetLogger):
 
         service = "admin_port_scanner"
         try:
-            scanner = nmap.PortScanner()  # defines port scanner function
+            scanner = nmap.PortScannerYield()  # defines port scanner function
             print "[*] checking for open admin ports..."
             targets = '-iL ' + os.path.join(self.default_filepath, "targets", str(target_list).strip('[]'))
             ports = ' -p ' + str(ports_to_scan).strip('[]').replace(' ', '')
-            scanner.scan(hosts=targets, arguments=ports)  # Nmap scan command
-            hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
-            for host, status in hosts_list:
-                ports = scanner[host]['tcp'].keys()  # retrieves tcp port results from scan
+            counter = 0
+            for host in scanner.scan(hosts=targets, arguments=ports): # Nmap scan command
+                total_hosts = self.calculate_total_number_of_hosts(target_list)
+                percentage = float(counter) / float(total_hosts) * 100.0
+                percentage = int(percentage)
+                sys.stdout.write('\r')
+                sys.stdout.write("[%-100s] %d%% Currently on %s" % ('='*percentage, percentage, host[0]))
+                sys.stdout.flush()
+                counter += 1
+            # hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
+            # for host, status in hosts_list:
+                ports = host['tcp'].keys()  # retrieves tcp port results from scan
                 if ports:
                     ports.sort()  # sorts ports
                     new_host = VulnerableHost(host)  # creates new object
                     self.vulnerable_hosts.append(new_host)
                     for port in ports:
-                        port_state = scanner[host]['tcp'][port]['state']  # defines port state variable
+                        port_state = host['tcp'][port]['state']  # defines port state variable
                         if port_state == 'open':  # checks to see if status is open
                             new_host.add_vulnerable_port(port)
                             self.log_open_port(host, port, port_state)
-        except PortScannerError as error:
-            print "[!] Error running port scanner, check target list path."
-            logging.exception("{0}\t{1}".format(service, error))
-            exit(0)
+        # except scanner.PortScannerError as error:
+        #     print "[!] Error running port scanner, check target list path."
+        #     logging.exception("{0}\t{1}".format(service, error))
+        #     exit(0)
         except Exception as error:
             logging.exception("{0}\t{1}".format(service, error))
         except KeyboardInterrupt:
@@ -228,8 +243,6 @@ def main():
         else:
             config_to_run = os.path.join(hh.default_filepath, "configs", args.config)
             hh.load_configuration_file(config_to_run)
-    # Instantiates Credential Checker & loads the HoneyHornet config.
-    cc = CredentialChecker(config=hh.config)
 
     # Setup local variables based on the config file.
     if args.config:
@@ -242,10 +255,6 @@ def main():
     banner = hh.config['bannerGrab']
     results_format = hh.config['resultsFormat']
 
-    # Enables banner grabbing if True in config.
-    if banner is True:
-        cc.banner = banner
-
     # Selects the type of scan to run based on the config.
     service = "run_scan_type"
     try:
@@ -255,10 +264,22 @@ def main():
             print "[*] Finishing up & exiting..."
         elif scan_type == '2':
             print "[*] Running in credential check mode..."
+            # Instantiates Credential Checker & loads the HoneyHornet config.
+            cc = CredentialChecker(config=hh.config)
+            # Enables banner grabbing if True in config.
+            if banner is True:
+                cc.banner = banner
             hh.check_admin_ports(target_hosts, ports_to_scan)
             hh.calculate_number_of_hosts(target_hosts)
             hosts_to_check = hh.vulnerable_hosts
             cc.run_credential_test(hosts_to_check)
+            print "[*] Finishing up & exiting..."
+        elif scan_type == '3':
+            print "[*] Running in view check mode..."
+            vc = ViewChecker(config=hh.config)
+            hh.check_admin_ports(target_hosts, ports_to_scan)
+            hosts_to_check = hh.vulnerable_hosts
+            vc.run_view_checker(hosts_to_check)
             print "[*] Finishing up & exiting..."
         else:
             print "[!] Please define a scan type in config file!"
