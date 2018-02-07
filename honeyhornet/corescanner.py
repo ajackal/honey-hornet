@@ -48,6 +48,17 @@ class HoneyHornet(HoneyHornetLogger):
         self.config = {}
 
     def load_configuration_file(self, yml_config):
+        """
+        Loads the YAML configuration file needed to run the program. Use command line option
+        "--config" to load a specific file. Will load "config.yml" in the "configs/" directory
+        by default.
+
+        Args:
+            - yml_config(str): the YAML configuration file you want to load.
+
+        Returns:
+            - config(dict): variable containing all the configuration settings.
+        """
         try:
             with open(yml_config, 'r') as cfg_file:
                 self.config = yaml.load(cfg_file)
@@ -85,6 +96,14 @@ class HoneyHornet(HoneyHornetLogger):
         self.write_log_file(logfile_name, "\n")
 
     # TODO: Add INFO level logging
+    def show_scan_progress():
+        for i in xrange(21):
+        sys.stdout.write('\r')
+        sys.stdout.write("[%-40s] %d%%" % ('='*i*2, 5*i))
+        sys.stdout.flush()
+        sleep(0.25)    
+    [========================================] 100%
+
 
     def calculate_number_of_hosts(self, target_list):
         """ Function scans the list or CIDR block to see which hosts are alive
