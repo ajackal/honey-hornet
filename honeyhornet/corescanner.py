@@ -154,7 +154,7 @@ class HoneyHornet(HoneyHornetLogger):
             logging.exception("calculate_number_of_hosts\t{0}".format(error))
 
     def create_new_vulnerable_host(self, host, ports):
-        """ Instantiates a new object of the Vulnerable host """
+        """ Instantiates a new object of the Vulnerable host
         new_host = VulnerableHost(host[0])  # creates new object
         self.vulnerable_hosts.append(new_host)
         for port in ports:
