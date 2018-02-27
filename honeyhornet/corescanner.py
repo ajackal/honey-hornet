@@ -181,7 +181,7 @@ class HoneyHornet(HoneyHornetLogger):
             scanner = nmap.PortScannerYield()  # defines port scanner function
             print "[*] checking for open admin ports..."
             targets = '-iL ' + os.path.join(self.default_filepath, "targets", str(target_list).strip('[]'))
-            ports = ' -p ' + str(ports_to_scan).strip('[]').replace(' ', '')
+            ports = '-Pn -p ' + str(ports_to_scan).strip('[]').replace(' ', '')
             total_hosts = self.calculate_total_number_of_hosts(target_list)
             counter = 0
             for host in scanner.scan(hosts=targets, arguments=ports): # Nmap scan command
