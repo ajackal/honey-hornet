@@ -225,11 +225,8 @@ class VulnerableHost(HoneyHornet):
 
     def put_credentials(self, service, port, user, password):
         """ Records credentials of a successful login attempt to an open admin port. """
-        credential_index = service + str(port)
-        self.credentials[credential_index] = {}
-        new_credentials = {}
-        new_credentials.update(user=user, password=password, port=port, service=service)
-        self.credentials[credential_index].update(new_credentials)
+        new_credentials = {"user": user, "password": password, "port": port, "service": service}
+        self.credentials.update(new_credentials)
 
     def put_banner(self, port, banner_txt, status, reason, headers):
         """ Adds port, banner to banner list of a port that is defined in the http_ports list or is not handled
@@ -239,12 +236,13 @@ class VulnerableHost(HoneyHornet):
 
     def get_credentials(self, open_csv):
         """ Formats and writes recovered credentials to a CSV file. """
+        x = len(self.credentials)
         for credential in self.credentials:
             open_csv.write("{0},{1},{2},{3},{4},{5}\n".format(self.time_stamp, self.ip,
-                                                              self.credentials[credential]['service'],
-                                                              self.credentials[credential]['port'],
-                                                              self.credentials[credential]['user'],
-                                                              self.credentials[credential]['password']))
+                                                              self.credentials['service'],
+                                                              self.credentials['port'],
+                                                              self.credentials['user'],
+                                                              self.credentials['password']))
 
 
 def main():
