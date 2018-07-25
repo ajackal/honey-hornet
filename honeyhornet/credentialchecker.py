@@ -253,7 +253,7 @@ class CredentialChecker(HoneyHornetLogger):
         self.CONNECTION_LOCK.release()
 
     def banner_grab(self, vulnerable_host, ports=None, https=False):
-        """ simple banner grab with HTTPLIB """
+        """ simple banner grab with Requests module. """
         self.CONNECTION_LOCK.acquire()
         service = "HTTP-BANNER-GRAB"
         try:
