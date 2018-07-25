@@ -8,7 +8,7 @@ from termcolor import colored
 import telnetlib
 from ftplib import FTP
 import threading
-import httplib
+import requests
 import re
 from pexpect import pxssh
 import time
@@ -268,24 +268,23 @@ class CredentialChecker(HoneyHornetLogger):
         try:
             for port in ports_to_check:
                 if https is True:
-                    conn = httplib.HTTPSConnection(host, port)
+                    connection_address = "https://{0}:{1}".format(host, port)
                 else:
-                    conn = httplib.HTTPConnection(host, port)
-                conn.request("GET", "/")
-                http_r1 = conn.getresponse()
-                banner_txt = http_r1.read(1024)
-                headers = http_r1.getheaders()
+                    connection_address = "http://{0}:{1}".format(host, port)
+                response = requests.get(connection_address)
+                banner_txt = response.text
+                headers = response.headers
                 if self.verbose:
-                    print(http_r1.status, http_r1.reason)
+                    print(response.status_code, response.reason)
                 # puts banner into the class instance of the host
-                vulnerable_host.put_banner(port, banner_txt, http_r1.status, http_r1.reason, headers)
+                vulnerable_host.put_banner(port, banner_txt, response.status_code, response.reason, headers)
                 banner_grab_filename = str(date.today()) + "_banner_grabs.log"
                 banner_grab_filename = os.path.join(self.default_filepath, "logs", banner_grab_filename)
                 with open(banner_grab_filename, 'a') as banner_log:
                     banner_to_log = "host={0}, http_port={1},\nheaders={2},\nbanner={3}\n".format(host, port,
                                                                                                   headers, banner_txt)
                     banner_log.write(banner_to_log)
-        except httplib.HTTPException:
+        except requests.ConnectionError:
             try:
                 self.banner_grab(host, https=True)
             except Exception as error:
@@ -328,7 +327,7 @@ class CredentialChecker(HoneyHornetLogger):
         # Uses Regular Expressions to extract errors for debugging/tuning the program.
         try:
             for port in ports_to_check:
-                conn = httplib.HTTPConnection(host, port, timeout=25)
+                connection_address = "http://{0}:{1}/xml/Connect.xml".format(host, port)
                 for credential in credentials:
                     user = str(credential[0])
                     password = str(credential[1])
@@ -337,11 +336,10 @@ class CredentialChecker(HoneyHornetLogger):
                     xml_body = xml_body.replace('$password$', password)
                     logging.debug(xml_body)
                     logging.info("Checking {0}:{1} on {2} with {3}".format(user, password, host, service))
-                    conn.request("POST", "/xml/Connect.xml", xml_body, headers)
-                    response = conn.getresponse()
+                    response = requests.post(connection_address, parameters=xml_body, headers=headers)
                     if self.verbose:
-                        print(response.status, response.reason)
-                    data = response.read()
+                        print(response.status_code, response.reason)
+                    data = response.text
                     if "message='OK'" in data:
                         self.log_results(host, port, user, password, service)
                         vulnerable_host.put_credentials(service, port, user, password)
@@ -355,7 +353,7 @@ class CredentialChecker(HoneyHornetLogger):
                         else:
                             if self.verbose:
                                 print("[*] Server returned an error.")
-                    conn.close()
+                    response.close()
         except Exception as error:
             error_msg = re.findall(r"message='(?P<error>.*)'", str(error))
             if error_msg:
