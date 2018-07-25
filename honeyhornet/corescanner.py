@@ -80,7 +80,7 @@ class HoneyHornet(HoneyHornetLogger):
         event = " host={0}   \tport={1}  \tstatus={2}".format(colored(host, "green"),
                                                               colored(port, "green"),
                                                               colored(status, "green"))
-        print "[*] Open port found:{0}".format(event)
+        print("[*] Open port found:{0}".format(event))
         self.write_log_file(logfile_name, event)
         self.write_log_file(logfile_name, "\n")
 
@@ -97,7 +97,7 @@ class HoneyHornet(HoneyHornetLogger):
                 total = len(open_target_list.readlines())
             live = len(self.vulnerable_hosts)
             percentage = 100 * (float(live) / float(total))
-            print "[+] {0} out of {1} hosts are vulnerable or {2}%".format(live, total, round(percentage, 2))
+            print("[+] {0} out of {1} hosts are vulnerable or {2}%".format(live, total, round(percentage, 2)))
             logfile_name = str(date.today()) + "_open_ports.log"
             logfile_name = os.path.join(self.default_filepath, "logs", logfile_name)
             with open(logfile_name, 'a') as log_file:
@@ -124,7 +124,7 @@ class HoneyHornet(HoneyHornetLogger):
         service = "admin_port_scanner"
         try:
             scanner = nmap.PortScanner()  # defines port scanner function
-            print "[*] checking for open admin ports..."
+            print("[*] checking for open admin ports...")
             targets = '-iL ' + os.path.join(self.default_filepath, "targets", str(target_list).strip('[]'))
             ports = ' -p ' + str(ports_to_scan).strip('[]').replace(' ', '')
             scanner.scan(hosts=targets, arguments=ports)  # Nmap scan command
@@ -141,7 +141,7 @@ class HoneyHornet(HoneyHornetLogger):
                             new_host.add_vulnerable_port(port)
                             self.log_open_port(host, port, port_state)
         except PortScannerError as error:
-            print "[!] Error running port scanner, check target list path."
+            print("[!] Error running port scanner, check target list path.")
             logging.exception("{0}\t{1}".format(service, error))
             exit(0)
         except Exception as error:
@@ -214,9 +214,9 @@ def main():
 
     # Setup local variables based on the config file.
     if args.config:
-        print "[*] Using {0} YAML config file...".format(colored(args.config, 'yellow'))
+        print("[*] Using {0} YAML config file...".format(colored(args.config, 'yellow')))
     else:
-        print "[*] Using {0} YAML config file...".format(colored('default', 'yellow'))
+        print("[*] Using {0} YAML config file...".format(colored('default', 'yellow')))
     target_hosts = hh.config['targets']
     ports_to_scan = hh.config['ports']
     scan_type = str(hh.config['scanType']).strip('[]')
@@ -231,25 +231,25 @@ def main():
     service = "run_scan_type"
     try:
         if scan_type == '1':
-            print "[*] Running in port scanner mode..."
+            print("[*] Running in port scanner mode...")
             hh.check_admin_ports(target_hosts, ports_to_scan)
-            print "[*] Finishing up & exiting..."
+            print("[*] Finishing up & exiting...")
         elif scan_type == '2':
-            print "[*] Running in credential check mode..."
+            print("[*] Running in credential check mode...")
             hh.check_admin_ports(target_hosts, ports_to_scan)
             hh.calculate_number_of_hosts(target_hosts)
             hosts_to_check = hh.vulnerable_hosts
             cc.run_credential_test(hosts_to_check)
-            print "[*] Finishing up & exiting..."
+            print("[*] Finishing up & exiting...")
         else:
-            print "[!] Please define a scan type in config file!"
+            print("[!] Please define a scan type in config file!")
             exit(0)
     except KeyboardInterrupt:
         exit(0)
     except Exception as error:
         logging.exception("{0}\t{1}".format(service, error))
     finally:
-        print "Runtime is: " + str(datetime.now() - start_time)  # Calculates run time for the program.
+        print("Runtime is: " + str(datetime.now() - start_time))  # Calculates run time for the program.
         if 'csv' in results_format:
             hh.write_results_to_csv()
         if 'json' in results_format:

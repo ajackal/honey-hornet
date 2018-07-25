@@ -60,7 +60,7 @@ class CredentialChecker(HoneyHornetLogger):
                                                                                         colored(password, "red"),
                                                                                         port,
                                                                                         protocol)
-        print "[*] Password recovered:{0}".format(event)
+        print("[*] Password recovered:{0}".format(event))
         self.write_log_file(log_directory, "\n")
         self.write_log_file(log_directory, event)
 
@@ -116,8 +116,8 @@ class CredentialChecker(HoneyHornetLogger):
             password = str(credential[1])
             logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
             if self.verbose:
-                print "[*] Testing Telnet connection on {0}...".format(host)
-                print "[*] username: {0} password: {1} port: {2}".format(user, password, port)
+                print("[*] Testing Telnet connection on {0}...".format(host))
+                print("[*] username: {0} password: {1} port: {2}".format(user, password, port))
             try:
                 t = telnetlib.Telnet(host, port, 15)
                 time.sleep(self.TIMER_DELAY)
@@ -129,7 +129,7 @@ class CredentialChecker(HoneyHornetLogger):
                 # server_response_long = t.read_all()
                 logging.info("Telnet server {0}:{1} returned:\n{2}".format(host, port, server_response))
                 if self.verbose:
-                    print server_response
+                    print(server_response)
                 if "OK" in server_response:
                     self.log_results(host, port, user, password, service)
                     vulnerable_host.put_credentials(service, port, user, password)
@@ -164,7 +164,7 @@ class CredentialChecker(HoneyHornetLogger):
         host = vulnerable_host.ip
         logging.info('{0} set for {1} service'.format(host, ftp_anon['service']))
         if self.verbose:
-            print "[*] Testing FTP connection on {0}...".format(host)
+            print("[*] Testing FTP connection on {0}...".format(host))
         try:
             ftp_conn = FTP(host)
             ftp_conn.login()
@@ -175,7 +175,7 @@ class CredentialChecker(HoneyHornetLogger):
             vulnerable_host.put_credentials(ftp_anon['service'], ftp_anon['port'], ftp_anon['user'],
                                             ftp_anon['password'])
             if self.verbose:
-                print "[+] FTP server responded with {0}".format(ftp_welcome)
+                print("[+] FTP server responded with {0}".format(ftp_welcome))
             return True
         except Exception as error:
             logging.exception("{0}\t{1}\t{2}\t{3}".format(host, ftp_anon['port'], ftp_anon['service'], error))
@@ -195,14 +195,14 @@ class CredentialChecker(HoneyHornetLogger):
             password = str(credential[1])
             logging.info('Checking {0}:{1} on {2} for {3} service.'.format(user, password, host, service))
             if self.verbose:
-                print "[*] Testing FTP connection on {0}...".format(host)
+                print("[*] Testing FTP connection on {0}...".format(host))
             try:
                 ftp_conn = FTP()
                 if ftp_conn.connect(host, 21, 1):
                     ftp_welcome = ftp_conn.getwelcome()
                     logging.info("{0} FTP server returned {1}".format(host, ftp_welcome))
                     if self.verbose:
-                        print "[*] FTP server returned {0}".format(ftp_welcome)
+                        print("[*] FTP server returned {0}".format(ftp_welcome))
                     ftp_conn.login(user, password)
                     ftp_conn.close()
                     self.log_results(host, port, user, password, service)
@@ -229,7 +229,7 @@ class CredentialChecker(HoneyHornetLogger):
         host = vulnerable_host.ip
         logging.info('{0} set for {1} service'.format(host, service))
         if self.verbose:
-            print "[*] Testing SSH service on {0}...".format(host)
+            print("[*] Testing SSH service on {0}...".format(host))
         for credential in credentials:
             user = str(credential[0])
             password = str(credential[1])
@@ -263,7 +263,7 @@ class CredentialChecker(HoneyHornetLogger):
             host = str(vulnerable_host)
             ports_to_check = set(ports.split(',').strip())
         if self.verbose:
-            print "[*] Grabbing banner from {0}".format(host)
+            print("[*] Grabbing banner from {0}".format(host))
         logging.info('{0} set for {1} service'.format(host, service))
         try:
             for port in ports_to_check:
@@ -276,7 +276,7 @@ class CredentialChecker(HoneyHornetLogger):
                 banner_txt = http_r1.read(1024)
                 headers = http_r1.getheaders()
                 if self.verbose:
-                    print http_r1.status, http_r1.reason
+                    print(http_r1.status, http_r1.reason)
                 # puts banner into the class instance of the host
                 vulnerable_host.put_banner(port, banner_txt, http_r1.status, http_r1.reason, headers)
                 banner_grab_filename = str(date.today()) + "_banner_grabs.log"
@@ -304,7 +304,7 @@ class CredentialChecker(HoneyHornetLogger):
         self.CONNECTION_LOCK.acquire()
         service = "WEB-AUTH-XML"
         if self.verbose:
-            print "[*] Attempting to validate credentials via HTTP-POST..."
+            print("[*] Attempting to validate credentials via HTTP-POST...")
         host = vulnerable_host.ip
         logging.info('{0} set for {1} service'.format(host, service))
         ports_to_check = set(self.http_ports) & set(vulnerable_host.ports)
@@ -340,7 +340,7 @@ class CredentialChecker(HoneyHornetLogger):
                     conn.request("POST", "/xml/Connect.xml", xml_body, headers)
                     response = conn.getresponse()
                     if self.verbose:
-                        print response.status, response.reason
+                        print(response.status, response.reason)
                     data = response.read()
                     if "message='OK'" in data:
                         self.log_results(host, port, user, password, service)
@@ -350,11 +350,11 @@ class CredentialChecker(HoneyHornetLogger):
                         if error_msg:
                             error = error_msg[0]
                             if self.verbose:
-                                print "[*] Server returned: {0}".format(error)
+                                print("[*] Server returned: {0}".format(error))
                             logging.error("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
                         else:
                             if self.verbose:
-                                print "[*] Server returned an error."
+                                print("[*] Server returned an error.")
                     conn.close()
         except Exception as error:
             error_msg = re.findall(r"message='(?P<error>.*)'", str(error))
@@ -378,11 +378,11 @@ class CredentialChecker(HoneyHornetLogger):
         logging.info("Banner Grab variable set to {0}".format(self.banner))
         credentials_to_check = self.build_credentials()
         threads = []
-        print "[*] Testing vulnerable host ip addresses..."
+        print("[*] Testing vulnerable host ip addresses...")
         try:
             for vulnerable_host in hosts_to_check:
                 if self.verbose:
-                    print '[*] checking >> {0}'.format(vulnerable_host.ip)
+                    print('[*] checking >> {0}'.format(vulnerable_host.ip))
                 if 21 in vulnerable_host.ports:
                     t0 = threading.Thread(target=self.check_ftp_anon, args=(vulnerable_host, ))
                     t1 = threading.Thread(target=self.check_ftp, args=(vulnerable_host, credentials_to_check))
@@ -439,9 +439,9 @@ def main():
     elif args.service is 'HTTP-XML':
         cc.http_post_xml(args.target, credentials)
     else:
-        print "[!] Unknown service. Please use: FTP, SSH, TELNET, HTTP-XML"
+        print("[!] Unknown service. Please use: FTP, SSH, TELNET, HTTP-XML")
 
-    print datetime.now() - start_time  # Calculates run time for the program.
+    print(datetime.now() - start_time)  # Calculates run time for the program.
 
 
 if __name__ == '__main__':
