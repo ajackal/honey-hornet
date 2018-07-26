@@ -297,12 +297,12 @@ def main():
             cc.run_credential_test(hosts_to_check)
             print("[*] Finishing up & exiting...")
         elif scan_type == '3':
-            print "[*] Running in view check mode..."
+            print("[*] Running in view check mode...")
             vc = ViewChecker(config=hh.config)
             hh.check_admin_ports(target_hosts, ports_to_scan)
             hosts_to_check = hh.vulnerable_hosts
             vc.run_view_checker(hosts_to_check)
-            print "[*] Finishing up & exiting..."
+            print("[*] Finishing up & exiting...")
         else:
             print("[!] Please define a scan type in config file!")
             exit(0)
