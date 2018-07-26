@@ -1,53 +1,57 @@
 import argparse
 import logging
 import os
+import sys
 import nmap
 import yaml
 import json
 from datetime import datetime, date
 from termcolor import colored
 from credentialchecker import CredentialChecker
+from viewchecker import ViewChecker
 from logger import HoneyHornetLogger
 import buildconfig
 
 
 class HoneyHornet(HoneyHornetLogger):
-    """ Main Honey Hornet Class
+    """
+    Uses NMAP to scan the targets and ports listed in the configuration file.
 
-    Holds all vulnerable hosts that are identified by the NMAP scan.
-    Holds all the default variables for the program: max thread connections, timer delay for login testing, users to
-    test, passwords to test, whether or not to have a verbose output and whether or not to grab a banner when connecting
-    to an open port.
+    Inherits HoneyHornet Logger for all the logging functionality.
 
-    Loads user-defined configurations from YAML config file. Default file = $HONEY_HORNET_HOME$/config.yml
-
-    Functions that handle two types of results logging:
-        1. log_open_ports() logs any open port found during the check_admin_ports() scan.
-        2. log_results() logs any credentials from a successful login attempt.
-
-    The function check_admin_ports() runs an NMAP scan for the targets and ports defined in the YAML config file. It is
-    a simple TCP SYN scan (half open) that checks to see if the port is open or not. It does not do service discovery.
-    Right now the program tests service by port default, e.g. if port 23 is open, it automatically runs a Telnet
-    service credential check without testing to verify that Telnet is running on that port.
-
-    For each host/target that is found with an open port, check_admin_ports() instantiates an object of the
-    VulnerableHost class.
+    Attributes:
+        - vulnerable_hosts(list) = list of all the vulnerable hosts found during the scan
+        - live_hosts(list) = all live hosts that are found
+        - time_stamp(str) = used for creating file names
+        - verbose(boolean) = set to True for more verbose print statements through execution
+        - default_filepath(str) = gets the current working directory to generate absolute file paths
+        - default_config_filepath(str) = the default file path to the config file
+        - config(dict) = YAML configuration gets loaded here
     """
 
-    vulnerable_hosts = []  # hosts that have open admin ports
+    vulnerable_hosts = []
 
     def __init__(self):
         HoneyHornetLogger.__init__(self)
-        self.live_hosts = []  # writes live hosts that are found here
+        self.live_hosts = []
         self.time_stamp = str(date.today())
-        self.users = []  # users that will be tested
-        self.passwords = []  # passwords to be tested
-        self.verbose = False  # if there will be a verbose output, default=False
+        self.verbose = False
         self.default_filepath = os.path.dirname(os.getcwd())
         self.default_config_filepath = os.path.join(self.default_filepath, "configs", "config.yml")
         self.config = {}
 
     def load_configuration_file(self, yml_config):
+        """Loads the YAML configuration file needed to run the program.
+
+        Use command line option "--config" to load a specific file.
+        Will load "config.yml" in the "configs/" directory by default.
+
+        Args:
+            - yml_config(str): the YAML configuration file you want to load.
+
+        Returns:
+            - config(dict): variable containing all the configuration settings.
+        """
         try:
             with open(yml_config, 'r') as cfg_file:
                 self.config = yaml.load(cfg_file)
@@ -56,6 +60,14 @@ class HoneyHornet(HoneyHornetLogger):
             self.load_configuration_file(self.default_config_filepath)
 
     def write_results_to_csv(self):
+        """Writes the results of the scan to a CSV formatted file.
+
+        Args:
+            - None
+
+        Returns:
+            - Nothing
+        """
         results_file = self.time_stamp + "_recovered_passwords.csv"
         results_file = os.path.join(self.default_filepath, "reports", results_file)
         headers = "Time Stamp,IP Address,Service,Port,Username,Password\n"
@@ -65,6 +77,14 @@ class HoneyHornet(HoneyHornetLogger):
                 host.get_credentials(open_csv)
 
     def write_results_to_json(self):
+        """Writes the results of the scan to a JSON formatted file.
+
+        Args:
+            - None
+
+        Returns:
+            - Nothing
+        """
         results_file = self.time_stamp + "_saved_objects.json"
         results_file = os.path.join(self.default_filepath, "saves", results_file)
         with open(results_file, 'a') as open_json_file:
@@ -74,30 +94,55 @@ class HoneyHornet(HoneyHornetLogger):
                 open_json_file.write("\n")
 
     def log_open_port(self, host, port, status):
-        """ Logs any host with an open port to a file. """
+        """ Logs any host with an open port to a custom formatted log file.
+
+        Args:
+            - host(str) = IP Address of the host with an open port
+            - port(str) = the open port that was found
+            - status(str) = always 'open'
+
+        Returns:
+            - Nothing
+
+        """
         logfile_name = str(date.today()) + "_open_ports.log"
         logfile_name = os.path.join(self.default_filepath, "logs", logfile_name)
         event = " host={0}   \tport={1}  \tstatus={2}".format(colored(host, "green"),
                                                               colored(port, "green"),
                                                               colored(status, "green"))
-        print("[*] Open port found:{0}".format(event))
+        if self.verbose:
+            print("[*] Open port found:{0}".format(event))
         self.write_log_file(logfile_name, event)
         self.write_log_file(logfile_name, "\n")
 
-    # TODO: Add INFO level logging
+    def calculate_total_number_of_hosts(self, target_list):
+        """ Calculates the total number of hosts that will be scanned.
+
+        Args:
+            - target_list(list) = a single item list returned from loading the YAML configuration
+
+        Returns:
+            - total(int) = the total number of hosts in the target list
+        """
+        target_list = str(target_list).strip("['']")
+        target_list = os.path.join(self.default_filepath, "targets", target_list)
+        with open(target_list, 'r') as open_target_list:
+            return len(open_target_list.readlines())
 
     def calculate_number_of_hosts(self, target_list):
-        """ Function scans the list or CIDR block to see which hosts are alive
-        writes the live hosts to the 'live_hosts' list
-        also calculates the percentage of how many hosts are alive
+        """ Calculates the number of a live hosts and the open percentage.
+
+        Args:
+            - target_list(list) = a single item list returned from loading the YAML configuration
+
+        Returns:
+            - writes to results to a log file and prints to screen
         """
         try:
-            # TODO: check the target_list, if string, .split(','), else just len()
-            with open(str(target_list).strip("['']"), 'r') as open_target_list:
-                total = len(open_target_list.readlines())
+            total = self.calculate_total_number_of_hosts(target_list)
             live = len(self.vulnerable_hosts)
             percentage = 100 * (float(live) / float(total))
-            print("[+] {0} out of {1} hosts are vulnerable or {2}%".format(live, total, round(percentage, 2)))
+            print("\n[+] {0} out of {1} hosts are vulnerable or {2}%".format(live, total, round(percentage, 2)))
             logfile_name = str(date.today()) + "_open_ports.log"
             logfile_name = os.path.join(self.default_filepath, "logs", logfile_name)
             with open(logfile_name, 'a') as log_file:
@@ -107,6 +152,16 @@ class HoneyHornet(HoneyHornetLogger):
                 log_file.write(log_totals)
         except Exception as error:
             logging.exception("calculate_number_of_hosts\t{0}".format(error))
+
+    def create_new_vulnerable_host(self, host, ports):
+        """ Instantiates a new object of the Vulnerable host """
+        new_host = VulnerableHost(host[0])  # creates new object
+        self.vulnerable_hosts.append(new_host)
+        for port in ports:
+            port_state = port[1]['state']  # defines port state variable
+            if port_state == 'open':  # checks to see if status is open
+                new_host.add_vulnerable_port(port[0])
+                self.log_open_port(host[0], port[0], port_state)
 
     def check_admin_ports(self, target_list, ports_to_scan):
         """Scans for a live host and for any open common admin ports defined in the configuration file.
@@ -123,27 +178,30 @@ class HoneyHornet(HoneyHornetLogger):
 
         service = "admin_port_scanner"
         try:
-            scanner = nmap.PortScanner()  # defines port scanner function
+            scanner = nmap.PortScannerYield()  # defines port scanner function
             print("[*] checking for open admin ports...")
             targets = '-iL ' + os.path.join(self.default_filepath, "targets", str(target_list).strip('[]'))
-            ports = ' -p ' + str(ports_to_scan).strip('[]').replace(' ', '')
-            scanner.scan(hosts=targets, arguments=ports)  # Nmap scan command
-            hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
-            for host, status in hosts_list:
-                ports = scanner[host]['tcp'].keys()  # retrieves tcp port results from scan
-                if ports:
-                    ports.sort()  # sorts ports
-                    new_host = VulnerableHost(host)  # creates new object
-                    self.vulnerable_hosts.append(new_host)
-                    for port in ports:
-                        port_state = scanner[host]['tcp'][port]['state']  # defines port state variable
-                        if port_state == 'open':  # checks to see if status is open
-                            new_host.add_vulnerable_port(port)
-                            self.log_open_port(host, port, port_state)
-        except PortScannerError as error:
-            print("[!] Error running port scanner, check target list path.")
-            logging.exception("{0}\t{1}".format(service, error))
-            exit(0)
+            ports = ' -Pn -p ' + str(ports_to_scan).strip('[]').replace(' ', '')
+            total_hosts = self.calculate_total_number_of_hosts(target_list)
+            counter = 0
+            for host in scanner.scan(hosts=targets, arguments=ports): # Nmap scan command
+                counter += 1
+                percentage = float(counter) / float(total_hosts) * 100.0
+                percentage = int(percentage)
+                sys.stdout.write('\r')
+                sys.stdout.write("[%-100s] %d%% Currently on %s" % ('='*percentage, percentage, host[0]))
+                sys.stdout.flush()
+            # hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
+            # for host, status in hosts_list:
+                try:
+                    ports = host[1]['scan'][host[0]]['tcp'].viewitems()  # retrieves tcp port results from scan
+                    self.create_new_vulnerable_host(host, ports)
+                except KeyError:
+                    continue
+        # except scanner.PortScannerError as error:
+        #     print "[!] Error running port scanner, check target list path."
+        #     logging.exception("{0}\t{1}".format(service, error))
+        #     exit(0)
         except Exception as error:
             logging.exception("{0}\t{1}".format(service, error))
         except KeyboardInterrupt:
@@ -167,11 +225,8 @@ class VulnerableHost(HoneyHornet):
 
     def put_credentials(self, service, port, user, password):
         """ Records credentials of a successful login attempt to an open admin port. """
-        credential_index = service + str(port)
-        self.credentials[credential_index] = {}
-        new_credentials = {}
-        new_credentials.update(user=user, password=password, port=port, service=service)
-        self.credentials[credential_index].update(new_credentials)
+        new_credentials = {"user": user, "password": password, "port": port, "service": service}
+        self.credentials.update(new_credentials)
 
     def put_banner(self, port, banner_txt, status, reason, headers):
         """ Adds port, banner to banner list of a port that is defined in the http_ports list or is not handled
@@ -181,12 +236,13 @@ class VulnerableHost(HoneyHornet):
 
     def get_credentials(self, open_csv):
         """ Formats and writes recovered credentials to a CSV file. """
+        x = len(self.credentials)
         for credential in self.credentials:
             open_csv.write("{0},{1},{2},{3},{4},{5}\n".format(self.time_stamp, self.ip,
-                                                              self.credentials[credential]['service'],
-                                                              self.credentials[credential]['port'],
-                                                              self.credentials[credential]['user'],
-                                                              self.credentials[credential]['password']))
+                                                              self.credentials['service'],
+                                                              self.credentials['port'],
+                                                              self.credentials['user'],
+                                                              self.credentials['password']))
 
 
 def main():
@@ -209,8 +265,6 @@ def main():
         else:
             config_to_run = os.path.join(hh.default_filepath, "configs", args.config)
             hh.load_configuration_file(config_to_run)
-    # Instantiates Credential Checker & loads the HoneyHornet config.
-    cc = CredentialChecker(config=hh.config)
 
     # Setup local variables based on the config file.
     if args.config:
@@ -223,10 +277,6 @@ def main():
     banner = hh.config['bannerGrab']
     results_format = hh.config['resultsFormat']
 
-    # Enables banner grabbing if True in config.
-    if banner is True:
-        cc.banner = banner
-
     # Selects the type of scan to run based on the config.
     service = "run_scan_type"
     try:
@@ -236,11 +286,23 @@ def main():
             print("[*] Finishing up & exiting...")
         elif scan_type == '2':
             print("[*] Running in credential check mode...")
+            # Instantiates Credential Checker & loads the HoneyHornet config.
+            cc = CredentialChecker(config=hh.config)
+            # Enables banner grabbing if True in config.
+            if banner is True:
+                cc.banner = banner
             hh.check_admin_ports(target_hosts, ports_to_scan)
             hh.calculate_number_of_hosts(target_hosts)
             hosts_to_check = hh.vulnerable_hosts
             cc.run_credential_test(hosts_to_check)
             print("[*] Finishing up & exiting...")
+        elif scan_type == '3':
+            print "[*] Running in view check mode..."
+            vc = ViewChecker(config=hh.config)
+            hh.check_admin_ports(target_hosts, ports_to_scan)
+            hosts_to_check = hh.vulnerable_hosts
+            vc.run_view_checker(hosts_to_check)
+            print "[*] Finishing up & exiting..."
         else:
             print("[!] Please define a scan type in config file!")
             exit(0)

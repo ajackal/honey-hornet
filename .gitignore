@@ -10,3 +10,4 @@
 .vscode/
 configs/test.yml
 configs/config.yml.bk
+configs/camera_viewer.yml
