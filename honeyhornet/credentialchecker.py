@@ -16,15 +16,16 @@ import itertools
 
 
 class CredentialChecker(HoneyHornetLogger):
-    """ CredentialChecker() defines all the methods to check each service for all the credentials defined. Right now the
-    supported services are:
+    """ CredentialChecker() defines all the methods to check each service for all the credentials defined.
 
-        1. Telnet
-        2. FTP - anonymous login
-        3. FTP - with credentials
-        4. SSH (with legacy ssh-dss support)
-        5. Web Authentication over HTTP (using xml files)
-        6. Banner grabs for open ports
+    Note:
+        Right now the supported services are:
+            - Telnet
+            - FTP - anonymous login
+            - FTP - with credentials
+            - SSH (with legacy ssh-dss support)
+            - Web Authentication over HTTP (using xml files)
+            - Banner grabs for open ports
 
     It also builds the credential list from the users and passwords defined in the configuration file. It builds a
     nested list of every combination of username and password. For each 'credential' in the list index[0] is the
@@ -33,6 +34,18 @@ class CredentialChecker(HoneyHornetLogger):
     The final method is run_credential_test() sets up and runs threads for each target and port/service. Max number of
     threads that can be run in parallel is defined in the HoneyHornet class (default=20) but depending on the hardware
     that might be need to be adjusted.
+
+    Attributes:
+        http_ports (list): list of integer ports that you want to use when scanning http protocol.
+        telnet_ports (list): list of integers to test using the telnet protocol
+        config (str): a string that will hold the configuration to run.
+        verbose (bool): True enables verbose output, default False.
+        banner (bool): True enables banner grabbing, default False.
+        MAX_CONNECTIONS (int): constant defining max number of threads
+        CONNECTION_LOCK (:obj:``BoundedSemaphore``): object defining the type of threading and max connnections.
+        TIMER_DELAY (int): number of seconds to delay when logging in
+        default_filepath (str): default file path used when saving results to disk
+        log_name (str): base file name used for the DEBUG log.
     """
     def __init__(self, config=None):
         HoneyHornetLogger.__init__(self)
@@ -52,23 +65,39 @@ class CredentialChecker(HoneyHornetLogger):
                             level=logging.DEBUG)
         
     def log_results(self, host, port, user, password, protocol):
-        """ Logs credentials that are successfully recovered. """
-        logfile_name = str(date.today()) + "_recovered_passwords.log"
-        log_directory = os.path.join(self.default_filepath, "logs", logfile_name)
-        event = " host={0}\tuser={1}\tpassword={2}   \tport={3}  \tprotocol={4}".format(colored(host, "green"),
-                                                                                        colored(user, "red"),
-                                                                                        colored(password, "red"),
-                                                                                        port,
-                                                                                        protocol)
-        print("[*] Password recovered:{0}".format(event))
-        self.write_log_file(log_directory, "\n")
-        self.write_log_file(log_directory, event)
+        """ Logs credentials that are successfully recovered to a file on disk.
+
+         Args:
+             host (str): IP Address of the host with recovered credentials.
+             port (str): port that the service was running on.
+             user (str): username that was recovered.
+             password (str): password that was recovered.
+             protocol (str): the service that was running and used to recover the credentials.
+
+         Returns:
+             bool: True for success, False otherwise.
+        """
+        try:
+            logfile_name = str(date.today()) + "_recovered_passwords.log"
+            log_directory = os.path.join(self.default_filepath, "logs", logfile_name)
+            event = " host={0}\tuser={1}\tpassword={2}   \tport={3}  \tprotocol={4}".format(colored(host, "green"),
+                                                                                            colored(user, "red"),
+                                                                                            colored(password, "red"),
+                                                                                            port,
+                                                                                            protocol)
+            print("[*] Password recovered:{0}".format(event))
+            self.write_log_file(log_directory, "\n")
+            self.write_log_file(log_directory, event)
+            return True
+        except IOError:
+            return False
 
     def build_credentials(self):
         """ Function takes the usernames and passwords from the configuration file and constructs every possible
         combination into a single credential list.
 
-        Example from 'config.yml':
+        Example:
+             from 'config.yml':
         [...snip...]
             users:
                 - bob
@@ -80,6 +109,7 @@ class CredentialChecker(HoneyHornetLogger):
         [...snip...]
 
         credentials = build_credentials()
+
         credentials = [('bob', '12345'), ('bob', 'secret'), ('sally', '12345'), ('sally', 'secret')]
 
         Then each username can be accessed with credentials[0] and each password with credentials[1]. Simplifies the
