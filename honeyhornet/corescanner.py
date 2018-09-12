@@ -302,10 +302,10 @@ class VulnerableHost(HoneyHornet):
         try:
             for credential in self.credentials:
                 open_csv.write("{0},{1},{2},{3},{4},{5}\n".format(self.time_stamp, self.ip,
-                                                                  self.credentials['service'],
-                                                                  self.credentials['port'],
-                                                                  self.credentials['user'],
-                                                                  self.credentials['password']))
+                                                                  credential['service'],
+                                                                  credential['port'],
+                                                                  credential['user'],
+                                                                  credential['password']))
             return True
         except IOError:
             logging.error("Error writing to CSV file (get_credentials).")
