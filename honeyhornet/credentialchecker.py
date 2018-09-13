@@ -114,6 +114,10 @@ class CredentialChecker(HoneyHornetLogger):
 
         Then each username can be accessed with credentials[0] and each password with credentials[1]. Simplifies the
         iteration through every credential combination.
+
+        Returns:
+            credentials (list): a list of string tuples with every combination of username and password.
+
         """
         users = self.config['users']
         passwords = self.config['passwords']
@@ -128,14 +132,24 @@ class CredentialChecker(HoneyHornetLogger):
 
     def check_telnet(self, vulnerable_host, port, credentials):
         """ Tries to connect via Telnet with common credentials. Then it prints the results of the connection attempt.
-        Due to the way TELNETLIB works and the different implementations of telnet. This is fairly inefficient way to
-        test credentials. Really needs to be customized based on the telnet implementation. Web-based credential testing
-        is much better and more standardized.
+
+        Note:
+            Due to the way TELNETLIB works and the different implementations of telnet. This is fairly inefficient way
+            to test credentials. Really needs to be customized based on the telnet implementation. Web-based credential
+            testing is much better and more standardized.
 
         UPDATE: Found that using a time.sleep() pause is a much more effective way of inputting credentials when
         testing. For the ALEOS from Sierra Wireless an "OK" response is received almost immediately when the correct
         credentials are supplied. When the wrong credentials are supplied, the response is much more delayed.
         A 3 second timeout has been effective in differentiating between a successful and failed login attempt.
+
+        Args:
+            vulnerable_host (object): the vulnerable host object that will be tested.
+            port (int): the port to use to test the Telnet connection.
+            credentials (list): a list holding string tuples of the credentials to test.
+
+        Returns:
+            bool: True for success, False otherwise.
         """
         self.CONNECTION_LOCK.acquire()
         service = "TELNET"
@@ -164,25 +178,30 @@ class CredentialChecker(HoneyHornetLogger):
                     self.log_results(host, port, user, password, service)
                     vulnerable_host.put_credentials(service, port, user, password)
                     t.close()
+                    return True
                 elif "incorrect" in server_response:
                     error = "Password incorrect."
                     logging.error("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
                     t.close()
+                    return False
                 else:
                     t.close()
+                    return False
             except Exception as error:
                 logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
+                return False
             except KeyboardInterrupt:
                 exit(0)
         self.CONNECTION_LOCK.release()
 
     def check_ftp_anon(self, vulnerable_host):
-        """
-        Function checks the FTP service for anonymous log-ins and does an FTP banner grab
+        """Function checks the FTP service for anonymous log-ins and does an FTP banner grab
 
-        check_ftp_anon(vulnerable_host)
+        Args:
+            vulnerable_host (object): object of the vulnerable host that will be tested.
 
-        vulnerable_host = IP address you want to check.
+        Returns:
+            bool: True for success, False otherwise.
         """
         self.CONNECTION_LOCK.acquire()
         ftp_anon = {
@@ -209,12 +228,21 @@ class CredentialChecker(HoneyHornetLogger):
             return True
         except Exception as error:
             logging.exception("{0}\t{1}\t{2}\t{3}".format(host, ftp_anon['port'], ftp_anon['service'], error))
+            return False
         except KeyboardInterrupt:
             exit(0)
         self.CONNECTION_LOCK.release()
 
     def check_ftp(self, vulnerable_host, credentials):
-        """ Checks the host for FTP connection using username and password combinations """
+        """ Checks the host for FTP connection using username and password combinations
+
+         Args:
+            vulnerable_host (object): object of the vulnerable host that will be tested.
+            credentials (list): a list holding string tuples of the credentials to test.
+
+        Returns:
+            bool: True for success, False otherwise.
+        """
         self.CONNECTION_LOCK.acquire()
         port = "21"
         service = "FTP"
@@ -237,9 +265,11 @@ class CredentialChecker(HoneyHornetLogger):
                     ftp_conn.close()
                     self.log_results(host, port, user, password, service)
                     vulnerable_host.put_credentials(service, port, user, password)
+                    return True
                 break
             except Exception as error:
                 logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
+                return False
             except KeyboardInterrupt:
                 exit(0)
         self.CONNECTION_LOCK.release()
@@ -252,6 +282,13 @@ class CredentialChecker(HoneyHornetLogger):
                 pxssh.pxssh(options={"StrictHostKeyChecking": "no", "HostKeyAlgorithms": "+ssh-dss"})
                 This will disable strict host checking and enable support for SSH-DSS working with most
                 LEGACY SSH implementations.
+
+        Args:
+            vulnerable_host (object): object of the vulnerable host that will be tested.
+            credentials (list): a list holding string tuples of the credentials to test.
+
+        Returns:
+            bool: True for success, False otherwise.
          """
         self.CONNECTION_LOCK.acquire()
         port = "22"
@@ -274,16 +311,28 @@ class CredentialChecker(HoneyHornetLogger):
                 vulnerable_host.put_credentials(service, port, user, password)
                 ssh_conn.logout()
                 ssh_conn.close()
+                return True
             except pxssh.EOF as EOF_error:
                 logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, EOF_error))
+                return False
             except pxssh.ExceptionPxssh as error:
                 logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
+                return False
             except KeyboardInterrupt:
                 exit(0)
         self.CONNECTION_LOCK.release()
 
     def banner_grab(self, vulnerable_host, ports=None, https=False):
-        """ simple banner grab with Requests module. """
+        """Simple banner grab with Requests module.
+
+        Args:
+            vulnerable_host (object): object of the vulnerable host that will be tested.
+            ports (list): list of ints of ports to grab banners from.
+            https (bool): Default False, if True uses an HTTPS connection.
+
+        Returns:
+            bool: True for success, False otherwise.
+        """
         self.CONNECTION_LOCK.acquire()
         service = "HTTP-BANNER-GRAB"
         try:
@@ -314,21 +363,30 @@ class CredentialChecker(HoneyHornetLogger):
                     banner_to_log = "host={0}, http_port={1},\nheaders={2},\nbanner={3}\n".format(host, port,
                                                                                                   headers, banner_txt)
                     banner_log.write(banner_to_log)
+                    return True
         except requests.ConnectionError:
             try:
                 self.banner_grab(host, https=True)
             except Exception as error:
                 logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
+                return False
         except Exception as error:
             logging.exception("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
+            return False
         except KeyboardInterrupt:
             exit(0)
         self.CONNECTION_LOCK.release()
 
     def http_post_xml(self, vulnerable_host, credentials):
-        """ Tests for default credentials against an Web-based Authentication
-        Reads and POSTs data via XML files.
+        """ Tests for default credentials against an Web-based Authentication. Reads and POSTs data via XML files.
         This only handles one specific type of Web-based Authentication at this time.
+
+        Args:
+            vulnerable_host (object): object of the vulnerable host that will be tested.
+            credentials (list): a list holding string tuples of the credentials to test.
+
+        Returns:
+            bool: True for success, False otherwise.
         """
         self.CONNECTION_LOCK.acquire()
         service = "WEB-AUTH-XML"
@@ -348,7 +406,14 @@ class CredentialChecker(HoneyHornetLogger):
         xml_connect_path = os.path.join(self.default_filepath, "xml", "Connect.xml")
 
         def read_xml(xml_file):
-            """ Reads the XML file to put in body of request """
+            """ Reads the XML file to put in body of request
+
+             Args:
+                 xml_file (str): a string of the file name of the xml file to read.
+
+            Returns:
+                xml_payload (str): the xml payload to be used in the authentication process.
+            """
             with open(xml_file, 'r') as xml_to_load:
                 xml_payload = xml_to_load.read()
                 return xml_payload
@@ -373,6 +438,7 @@ class CredentialChecker(HoneyHornetLogger):
                     if "message='OK'" in data:
                         self.log_results(host, port, user, password, service)
                         vulnerable_host.put_credentials(service, port, user, password)
+                        return True
                     else:
                         error_msg = re.findall(r"message='(?P<error>.*)'", str(data))
                         if error_msg:
@@ -380,6 +446,7 @@ class CredentialChecker(HoneyHornetLogger):
                             if self.verbose:
                                 print("[*] Server returned: {0}".format(error))
                             logging.error("{0}\t{1}\t{2}\t{3}".format(host, port, service, error))
+                            return False
                         else:
                             if self.verbose:
                                 print("[*] Server returned an error.")
@@ -389,8 +456,10 @@ class CredentialChecker(HoneyHornetLogger):
             if error_msg:
                 error = error_msg[0]
                 logging.exception("{0}\t{1}\t{2}".format(host, service, error))
+                return False
             else:
                 logging.exception("{0}\t{1}\t{2}".format(host, service, error))
+                return False
         except KeyboardInterrupt:
             self.CONNECTION_LOCK.release()
             exit(0)
@@ -398,7 +467,13 @@ class CredentialChecker(HoneyHornetLogger):
 
     def run_credential_test(self, hosts_to_check):
         """ Function tests hosts for default credentials on open 'admin' ports
-        Utilizes threading to greatly speed up the scanning
+        Utilizes threading to greatly speed up the scanning.
+
+        Args:
+            hosts_to_check (list): a list of hosts to be checked for credentials.
+
+        Returns:
+            bool: True for success, False otherwise.
         """
         service = "building_threads"
         logging.info("Building threads.")
@@ -436,12 +511,15 @@ class CredentialChecker(HoneyHornetLogger):
                 thread.start()
             for thread in threads:
                 thread.join(120)
-        except KeyboardInterrupt:
-            exit(0)
+            return True
         except threading.ThreadError as error:
             logging.exception("{0}\t{1}".format(service, error))
+            return False
         except Exception as e:
             logging.exception(e)
+            return False
+        except KeyboardInterrupt:
+            exit(0)
 
 
 def main():
