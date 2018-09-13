@@ -108,9 +108,9 @@ class CredentialChecker(HoneyHornetLogger):
                 - secret
         [...snip...]
 
-        credentials = build_credentials()
-
-        credentials = [('bob', '12345'), ('bob', 'secret'), ('sally', '12345'), ('sally', 'secret')]
+        >>> credentials = build_credentials()
+        >>> credentials
+        >>> [('bob', '12345'), ('bob', 'secret'), ('sally', '12345'), ('sally', 'secret')]
 
         Then each username can be accessed with credentials[0] and each password with credentials[1]. Simplifies the
         iteration through every credential combination.
