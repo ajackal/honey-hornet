@@ -22,16 +22,14 @@ class HoneyHornetLogger:
         logging.basicConfig(filename=self.log_filename, format='%(asctime)s %(levelname)s: %(message)s',
                             level=logging.DEBUG)
 
-    @staticmethod
-    def write_log_file(logfile_name, event):
+    def write_log_file(self, event):
         """ Writes the event to the proper log file.
 
          Args:
-             logfile_name (str): the name of the log file the event should be written to.
              event (str): the event to be written to the log file
         """
         time_now = datetime.now()
-        with open(logfile_name, 'a') as log_file:
+        with open(self.log_name, 'a') as log_file:
             if "\n" not in event:
                 log_file.write(str(time_now))
             log_file.write(event)
