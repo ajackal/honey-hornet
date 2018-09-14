@@ -1,6 +1,5 @@
 # ignore all log files created locally
 *.log
-*.txt
 *.bak
 *.swp
 *.csv
@@ -11,3 +10,6 @@
 configs/test.yml
 configs/config.yml.bk
 configs/camera_viewer.yml
+configs/config2.yml
+logs/*.txt
+targets/*.txt
