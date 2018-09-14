@@ -8,7 +8,7 @@ import json
 from datetime import datetime, date
 from termcolor import colored
 from credentialchecker import CredentialChecker
-from viewchecker import ViewChecker
+# from viewchecker import ViewChecker
 from logger import HoneyHornetLogger
 import buildconfig
 
@@ -53,10 +53,12 @@ class HoneyHornet(HoneyHornetLogger):
         try:
             with open(yml_config, 'r') as cfg_file:
                 self.config = yaml.load(cfg_file)
-                return "Successfully loaded configuration file."
+            return "Successfully loaded configuration file."
         except IOError:
             b = buildconfig.BuildConfig()
-            self.load_configuration_file(self.default_config_filepath)
+            # self.load_configuration_file(self.default_config_filepath)
+            with open(self.default_config_filepath, 'r') as cfg_file:
+                self.config = yaml.load(cfg_file)
             return "Successfully built configuration."
 
     def write_results_to_csv(self):

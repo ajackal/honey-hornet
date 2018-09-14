@@ -1,6 +1,10 @@
+import os
+
+
 class BuildConfig:
     def __init__(self):
-        with open("config.yml", "w") as config_file:
+        self.config_path = os.path.join(os.path.split(os.getcwd())[0], "configs", "config.yml")
+        with open(self.config_path, "w") as config_file:
             config_file.write("# Configuration file for Honey Hornet.\n"
                               "# Defines the type of scan to run.\n"
                               "# Uncomment one option only.\n"
