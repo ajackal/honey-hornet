@@ -7,7 +7,7 @@ import yaml
 import json
 from datetime import datetime, date
 from termcolor import colored
-from credentialchecker import CredentialChecker
+from honeyhornet import credentialchecker
 # from viewchecker import ViewChecker
 from honeyhornet import logger
 import buildconfig
@@ -356,7 +356,7 @@ def main():
         elif scan_type == '2':
             print("[*] Running in credential check mode...")
             # Instantiates Credential Checker & loads the HoneyHornet config.
-            cc = CredentialChecker(config=hh.config)
+            cc = credentialchecker.CredentialChecker(config=hh.config)
             # Enables banner grabbing if True in config.
             if banner is True:
                 cc.banner = banner
