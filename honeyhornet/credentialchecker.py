@@ -1,6 +1,6 @@
 import os
 import argparse
-from logger import HoneyHornetLogger
+from honeyhornet import logger
 from threading import BoundedSemaphore
 import logging
 from datetime import date, datetime
@@ -15,7 +15,7 @@ import time
 import itertools
 
 
-class CredentialChecker(HoneyHornetLogger):
+class CredentialChecker(logger.HoneyHornetLogger):
     """ CredentialChecker() defines all the methods to check each service for all the credentials defined.
 
     Note:
@@ -48,7 +48,7 @@ class CredentialChecker(HoneyHornetLogger):
         log_name (str): base file name used for the DEBUG log.
     """
     def __init__(self, config=None):
-        HoneyHornetLogger.__init__(self)
+        logger.HoneyHornetLogger.__init__(self)
         # TODO: add/modify http_ports list
         self.http_ports = [8000, 8080, 8081, 8090, 9191, 9443]
         self.telnet_ports = [23, 2332]
@@ -86,8 +86,8 @@ class CredentialChecker(HoneyHornetLogger):
                                                                                             port,
                                                                                             protocol)
             print("[*] Password recovered:{0}".format(event))
-            self.write_log_file(log_directory, "\n")
-            self.write_log_file(log_directory, event)
+            self.write_log_file("\n")
+            self.write_log_file(event)
             return True
         except IOError:
             return False

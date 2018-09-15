@@ -9,11 +9,11 @@ from datetime import datetime, date
 from termcolor import colored
 from credentialchecker import CredentialChecker
 # from viewchecker import ViewChecker
-from logger import HoneyHornetLogger
+from honeyhornet import logger
 import buildconfig
 
 
-class HoneyHornet(HoneyHornetLogger):
+class HoneyHornet(logger.HoneyHornetLogger):
     """Uses NMAP to scan the targets and ports listed in the configuration file.
 
     Inherits HoneyHornetLogger for all the logging functionality.
@@ -31,7 +31,7 @@ class HoneyHornet(HoneyHornetLogger):
     vulnerable_hosts = []
 
     def __init__(self):
-        HoneyHornetLogger.__init__(self)
+        logger.HoneyHornetLogger.__init__(self)
         self.live_hosts = []
         self.time_stamp = str(date.today())
         self.verbose = False
@@ -117,8 +117,8 @@ class HoneyHornet(HoneyHornetLogger):
                                                              colored(status, "green"))
             if self.verbose:
                 print("[*] Open port found:{0}".format(event))
-            self.write_log_file(logfile_name, event)
-            self.write_log_file(logfile_name, "\n")
+            self.write_log_file(event)
+            self.write_log_file("\n")
             return True
         except IOError:
             logging.error("Error writing to log file.")
@@ -212,7 +212,7 @@ class HoneyHornet(HoneyHornetLogger):
             ports = ' -Pn -p ' + str(ports_to_scan).strip('[]').replace(' ', '')
             total_hosts = self.calculate_total_number_of_hosts(target_list)
             counter = 0
-            for host in scanner.scan(hosts=targets, arguments=ports): # Nmap scan command
+            for host in scanner.scan(hosts=targets, arguments=ports):  # Nmap scan command
                 counter += 1
                 percentage = float(counter) / float(total_hosts) * 100.0
                 percentage = int(percentage)
@@ -365,13 +365,13 @@ def main():
             hosts_to_check = hh.vulnerable_hosts
             cc.run_credential_test(hosts_to_check)
             print("[*] Finishing up & exiting...")
-        elif scan_type == '3':
-            print("[*] Running in view check mode...")
-            vc = ViewChecker(config=hh.config)
-            hh.check_admin_ports(target_hosts, ports_to_scan)
-            hosts_to_check = hh.vulnerable_hosts
-            vc.run_view_checker(hosts_to_check)
-            print("[*] Finishing up & exiting...")
+        # elif scan_type == '3':
+        #     print("[*] Running in view check mode...")
+        #     vc = ViewChecker(config=hh.config)
+        #     hh.check_admin_ports(target_hosts, ports_to_scan)
+        #     hosts_to_check = hh.vulnerable_hosts
+        #     vc.run_view_checker(hosts_to_check)
+        #     print("[*] Finishing up & exiting...")
         else:
             print("[!] Please define a scan type in config file!")
             exit(0)
