@@ -25,14 +25,14 @@ class TestHoneyHornet(TestCase):
 
     def test_calculate_total_number_of_hosts(self):
         cs = corescanner.HoneyHornet()
-        test_target_list = ['test_target_list.txt']
+        test_target_list = ['test/test_target_list.txt']
         result = cs.calculate_number_of_hosts(test_target_list)
         self.assertTrue(result)
         # self.fail()
 
     def test_calculate_number_of_hosts(self):
         cs = corescanner.HoneyHornet()
-        test_target_list = ['test_target_list.txt']
+        test_target_list = ['test/test_target_list.txt']
         actual = cs.calculate_total_number_of_hosts(test_target_list)
         expected = 5
         self.assertIs(actual, expected)
