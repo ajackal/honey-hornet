@@ -10,7 +10,7 @@ from termcolor import colored
 from honeyhornet import credentialchecker
 # from viewchecker import ViewChecker
 from honeyhornet import logger
-import buildconfig
+from honeyhornet import buildconfig
 
 
 class HoneyHornet(logger.HoneyHornetLogger):
