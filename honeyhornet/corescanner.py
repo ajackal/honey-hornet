@@ -54,7 +54,7 @@ class HoneyHornet(logger.HoneyHornetLogger):
             with open(yml_config, 'r') as cfg_file:
                 self.config = yaml.load(cfg_file)
             return "Successfully loaded configuration file."
-        except IOError:
+        except IOError or FileNotFoundError:
             b = buildconfig.BuildConfig()
             # self.load_configuration_file(self.default_config_filepath)
             with open(self.default_config_filepath, 'r') as cfg_file:
