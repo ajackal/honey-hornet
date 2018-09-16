@@ -1,5 +1,6 @@
 from unittest import TestCase
 from honeyhornet import corescanner
+from honeyhornet import logger
 import os
 
 
@@ -32,7 +33,9 @@ class TestHoneyHornet(TestCase):
         # self.fail()
 
     def test_calculate_number_of_hosts(self):
+        # TODO: create a few live hosts and have the assert by for the correct int/float, not bool.
         cs = corescanner.HoneyHornet()
+        test_log_file = logger.HoneyHornetLogger()
         test_target_list = ['test/test_target_list.txt']
         result = cs.calculate_number_of_hosts(test_target_list)
         self.assertTrue(result)
