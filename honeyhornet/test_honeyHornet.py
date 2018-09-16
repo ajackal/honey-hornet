@@ -1,5 +1,6 @@
 from unittest import TestCase
 from honeyhornet import corescanner
+import os
 
 
 class TestHoneyHornet(TestCase):
@@ -8,10 +9,9 @@ class TestHoneyHornet(TestCase):
         # will test the building of a config using buildconfig
         cs = corescanner.HoneyHornet()
         yml_config = "aNon-existentYAMLconfig.yml"
-        real_yml_config = "/home/Chris/Projects/honey-hornet/configs/config.yml"
-        expected = "built"
-        actual = cs.load_configuration_file(yml_config)
-        self.assertIn(expected, actual)
+        # real_yml_config = os.path.join(os.getcwd(),"configs", "config.yml")
+        result = cs.load_configuration_file(yml_config)
+        self.assertFalse(result)
         # self.fail()
 
     # def test_write_results_to_csv(self):

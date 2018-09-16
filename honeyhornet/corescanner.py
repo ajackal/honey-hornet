@@ -10,7 +10,6 @@ from termcolor import colored
 from honeyhornet import credentialchecker
 # from viewchecker import ViewChecker
 from honeyhornet import logger
-from honeyhornet import buildconfig
 
 
 class HoneyHornet(logger.HoneyHornetLogger):
@@ -53,13 +52,9 @@ class HoneyHornet(logger.HoneyHornetLogger):
         try:
             with open(yml_config, 'r') as cfg_file:
                 self.config = yaml.load(cfg_file)
-            return "Successfully loaded configuration file."
+            return True
         except IOError or FileNotFoundError:
-            b = buildconfig.BuildConfig()
-            # self.load_configuration_file(self.default_config_filepath)
-            with open(self.default_config_filepath, 'r') as cfg_file:
-                self.config = yaml.load(cfg_file)
-            return "Successfully built configuration."
+            return False
 
     def write_results_to_csv(self):
         """Writes the results of the scan to a CSV formatted file.
@@ -327,7 +322,7 @@ def main():
     # Instantiates HoneyHornet & loads the appropriate config file.
     hh = HoneyHornet()
     if args.config is None:
-        hh.load_configuration_file(os.path.join(hh.default_filepath, "configs", "config.yml"))
+        return "[!] Error, must define configuration file to load."
     else:
         if "config/" in args.config:
             hh.load_configuration_file(args.config)
