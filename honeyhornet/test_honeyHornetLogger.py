@@ -7,7 +7,7 @@ class TestHoneyHornetLogger(TestCase):
         test_log_file = logger.HoneyHornetLogger()
         event = "A test event."
         wrong_event = "Something different so it fails."
-        test_log_file.write_log_file(test_log_file.log_filename, event)
+        test_log_file.write_log_file(test_log_file.log_name, event)
         with open(test_log_file.log_name, 'r') as log_file_open:
             self.assertIn(event, log_file_open.read())
         # self.fail()

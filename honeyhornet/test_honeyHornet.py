@@ -1,7 +1,5 @@
 from unittest import TestCase
 from honeyhornet import corescanner
-from honeyhornet import logger
-import os
 
 
 class TestHoneyHornet(TestCase):
