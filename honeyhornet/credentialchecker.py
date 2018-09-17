@@ -79,15 +79,15 @@ class CredentialChecker(logger.HoneyHornetLogger):
         """
         try:
             logfile_name = str(date.today()) + "_recovered_passwords.log"
-            log_directory = os.path.join(self.default_filepath, "logs", logfile_name)
+            log_name = os.path.join(self.default_filepath, "logs", logfile_name)
             event = " host={0}\tuser={1}\tpassword={2}   \tport={3}  \tprotocol={4}".format(colored(host, "green"),
                                                                                             colored(user, "red"),
                                                                                             colored(password, "red"),
                                                                                             port,
                                                                                             protocol)
             print("[*] Password recovered:{0}".format(event))
-            self.write_log_file("\n")
-            self.write_log_file(event)
+            self.write_log_file(log_name, "\n")
+            self.write_log_file(log_name, event)
             return True
         except IOError:
             return False

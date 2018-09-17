@@ -13,7 +13,7 @@ class HoneyHornetLogger:
     """
     def __init__(self):
         """ Setup logging file path and formatting """
-        self.log_directory = os.path.join(os.path.dirname(os.getcwd()), "logs")
+        self.log_directory = os.path.join(os.path.split(os.path.dirname(__file__))[0], "logs")
         self.log_filename = str(date.today()) + "_DEBUG.log"
         self.log_name = os.path.join(self.log_directory, self.log_filename)
         # self.log_directory = os.path.dirname(log_name)
@@ -22,14 +22,16 @@ class HoneyHornetLogger:
         logging.basicConfig(filename=self.log_filename, format='%(asctime)s %(levelname)s: %(message)s',
                             level=logging.DEBUG)
 
-    def write_log_file(self, event):
+    @staticmethod
+    def write_log_file(log_name, event):
         """ Writes the event to the proper log file.
 
          Args:
+             log_name (str): the log name that you want the even to be written to.
              event (str): the event to be written to the log file
         """
         time_now = datetime.now()
-        with open(self.log_name, 'a') as log_file:
+        with open(log_name, 'a') as log_file:
             if "\n" not in event:
                 log_file.write(str(time_now))
             log_file.write(event)

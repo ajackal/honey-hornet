@@ -113,8 +113,8 @@ class HoneyHornet(logger.HoneyHornetLogger):
                                                              colored(status, "green"))
             if self.verbose:
                 print("[*] Open port found:{0}".format(event))
-            self.write_log_file(event)
-            self.write_log_file("\n")
+            self.write_log_file(logfile_name, event)
+            self.write_log_file(logfile_name, "\n")
             return True
         except IOError:
             logging.error("Error writing to log file.")
