@@ -35,8 +35,7 @@ class TestHoneyHornet(TestCase):
     def test_calculate_number_of_hosts(self):
         # TODO: create a few live hosts and have the assert by for the correct int/float, not bool.
         cs = corescanner.HoneyHornet()
-        test_log_file = logger.HoneyHornetLogger()
-        cs.create_new_vulnerable_host(['127.0.0.1'], ['0', {'port': '22', 'state': 'open'}])
+        cs.create_new_vulnerable_host(['127.0.0.1'], [['22', {'port': '22', 'state': 'open'}]])
         test_target_list = ['test/test_target_list.txt']
         result = cs.calculate_number_of_hosts(test_target_list)
         self.assertTrue(result)

@@ -182,7 +182,7 @@ class HoneyHornet(logger.HoneyHornetLogger):
                 if port_state == 'open':  # checks to see if status is open
                     new_host.add_vulnerable_port(port[0])
                     self.log_open_port(host[0], port[0], port_state)
-            return True
+                    return True
         except Exception:
             logging.exception("Error creating new vulnerable host.")
             return False
