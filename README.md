@@ -1,6 +1,7 @@
 # Honey Hornet
-![Travis CI Build Status](https://travis-ci.org/ajackal/honey-hornet.svg?branch=master)
 port scanner &amp; login credential tester
+
+![Travis CI Build Status](https://travis-ci.org/ajackal/honey-hornet.svg?branch=master)
 
 ## honeyhornet.py
 Use the `config.yml` file to set how Honey Hornet will run:
