@@ -35,7 +35,7 @@ class HoneyHornet(logger.HoneyHornetLogger):
         self.time_stamp = str(date.today())
         self.verbose = False
         # self.default_filepath = os.path.dirname(os.getcwd())
-        self.default_filepath = os.getcwd()
+        self.default_filepath = os.path.split(os.path.dirname(__file__))[0]
         self.default_config_filepath = os.path.join(self.default_filepath, "configs", "config.yml")
         self.config = {}
 
