@@ -2,7 +2,7 @@ import argparse
 import logging
 import os
 import sys
-# import nmap
+import nmap
 import yaml
 import json
 from datetime import datetime, date
