@@ -363,8 +363,11 @@ def main():
             hh.check_admin_ports(target_hosts, ports_to_scan)
             hh.calculate_number_of_hosts(target_hosts)
             hosts_to_check = hh.vulnerable_hosts
-            cc.run_credential_test(hosts_to_check)
-            print("[*] Finishing up & exiting...")
+            if len(hosts_to_check) is not 0:
+                cc.run_credential_test(hosts_to_check)
+                print("[*] Finishing up & exiting...")
+            else:
+                print("[*] No vulnerable hosts to check, quitting.")
         # elif scan_type == '3':
         #     print("[*] Running in view check mode...")
         #     vc = ViewChecker(config=hh.config)
