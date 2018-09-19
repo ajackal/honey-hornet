@@ -58,7 +58,7 @@ class CredentialChecker(logger.HoneyHornetLogger):
         MAX_CONNECTIONS = 20  # max threads that can be created
         self.CONNECTION_LOCK = BoundedSemaphore(value=MAX_CONNECTIONS)
         self.TIMER_DELAY = 3  # timer delay used for Telnet testing
-        self.default_filepath = os.path.dirname(os.getcwd())
+        self.default_filepath = os.path.split(os.path.dirname(__file__))[0]
         log_name = str(date.today()) + "_DEBUG.log"
         log_name = os.path.join(self.default_filepath, "logs", log_name)
         logging.basicConfig(filename=log_name, format='%(asctime)s %(levelname)s: %(message)s',
