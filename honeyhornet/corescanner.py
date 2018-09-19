@@ -218,9 +218,9 @@ class HoneyHornet(logger.HoneyHornetLogger):
             # hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
             # for host, status in hosts_list:
                 try:
-                    ports = host[1]['scan'][host[0]]['tcp'].viewitems()  # retrieves tcp port results from scan
+                    ports = host[1]['scan'][host[0]]['tcp'].keys()  # retrieves tcp port results from scan
                     for port in ports:
-                        port_state = port[1]['state']  # defines port state variable
+                        port_state = host[1]['scan'][host[0]]['tcp'][port[1]]['state']  # defines port state variable
                         if port_state == 'open':
                             self.create_new_vulnerable_host(host, ports)
                             break
