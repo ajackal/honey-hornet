@@ -19,7 +19,7 @@ class HoneyHornetLogger:
         # self.log_directory = os.path.dirname(log_name)
         if not os.path.exists(self.log_directory):
             os.mkdir(self.log_directory)
-        logging.basicConfig(filename=self.log_filename, format='%(asctime)s %(levelname)s: %(message)s',
+        logging.basicConfig(filename=self.log_name, format='%(asctime)s %(levelname)s: %(message)s',
                             level=logging.DEBUG)
 
     @staticmethod
