@@ -65,6 +65,7 @@ class HoneyHornet(logger.HoneyHornetLogger):
         """
         try:
             results_file = self.time_stamp + "_recovered_passwords.csv"
+            # TODO: add check for directory and init if False
             results_file = os.path.join(self.default_filepath, "reports", results_file)
             headers = "Time Stamp,IP Address,Service,Port,Username,Password\n"
             with open(results_file, 'a') as open_csv:
@@ -84,6 +85,7 @@ class HoneyHornet(logger.HoneyHornetLogger):
         """
         try:
             results_file = self.time_stamp + "_saved_objects.json"
+            # TODO: add check for directory and init if False
             results_file = os.path.join(self.default_filepath, "saves", results_file)
             with open(results_file, 'a') as open_json_file:
                 for host in self.vulnerable_hosts:
@@ -108,6 +110,7 @@ class HoneyHornet(logger.HoneyHornetLogger):
         """
         try:
             logfile_name = str(date.today()) + "_open_ports.log"
+            # TODO: add check for directory and init if False
             logfile_name = os.path.join(self.default_filepath, "logs", logfile_name)
             event = " host={0}\tport={1}\tstatus={2}".format(colored(host, "green"), colored(port, "green"),
                                                              colored(status, "green"))
@@ -182,7 +185,7 @@ class HoneyHornet(logger.HoneyHornetLogger):
                 if port_state == 'open':  # checks to see if status is open
                     new_host.add_vulnerable_port(port)
                     self.log_open_port(host[0], port, port_state)
-                    return True
+                    # return True
         except Exception:
             logging.exception("Error creating new vulnerable host.")
             return False
@@ -264,6 +267,7 @@ class VulnerableHost(HoneyHornet):
         Args:
             port (str): the open port that was found.
         """
+        # self.ports = ports
         self.ports.append(port)
 
     def put_credentials(self, service, port, user, password):
@@ -333,7 +337,10 @@ def main():
             hh.load_configuration_file(args.config)
         else:
             config_to_run = os.path.join(hh.default_filepath, "configs", args.config)
-            hh.load_configuration_file(config_to_run)
+            try:
+                load_status = hh.load_configuration_file(config_to_run)
+            except Exception:
+                raise
 
     # Setup local variables based on the config file.
     if args.config:
