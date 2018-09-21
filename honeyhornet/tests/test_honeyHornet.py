@@ -42,7 +42,7 @@ class TestHoneyHornet(TestCase):
     def test_create_new_vulnerable_host(self):
         cs = corescanner.HoneyHornet()
         result = cs.create_new_vulnerable_host(['127.0.0.1'], [['22', {'port': '22', 'state': 'open'}]])
-        self.assertTrue(result)
+        self.assertIsInstance(cs.vulnerable_hosts[0], corescanner.VulnerableHost)
     #     self.fail()
 
     # def test_check_admin_ports(self):

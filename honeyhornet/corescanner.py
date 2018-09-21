@@ -185,10 +185,8 @@ class HoneyHornet(logger.HoneyHornetLogger):
                 if port_state == 'open':  # checks to see if status is open
                     new_host.add_vulnerable_port(port)
                     self.log_open_port(host[0], port, port_state)
-                    # return True
         except Exception:
             logging.exception("Error creating new vulnerable host.")
-            return False
 
     def check_admin_ports(self, target_list, ports_to_scan):
         """Scans for a live host and for any open common admin ports defined in the configuration file.
