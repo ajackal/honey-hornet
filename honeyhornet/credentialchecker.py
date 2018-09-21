@@ -420,7 +420,7 @@ class CredentialChecker(logger.HoneyHornetLogger):
                 xml_payload (str): the xml payload to be used in the authentication process.
             """
             with open(xml_file, 'r') as xml_to_load:
-                xml_payload = {"Connect.xml": xml_to_load.read()}
+                xml_payload = xml_to_load.read()
                 return xml_payload
 
         # Tries to connect to host via HTTP-POST w/ the XML authentication in the body of the request.
@@ -434,9 +434,10 @@ class CredentialChecker(logger.HoneyHornetLogger):
                     xml_body = read_xml(xml_connect_path)
                     xml_body = xml_body.replace('$username$', user)
                     xml_body = xml_body.replace('$password$', password)
+                    xml_data = {"Connect.xml": xml_body}
                     logging.debug(xml_body)
                     logging.info("Checking {0}:{1} on {2} with {3}".format(user, password, host, service))
-                    response = requests.post(connection_address, data=xml_body, headers=headers)
+                    response = requests.post(connection_address, data=xml_data, headers=headers)
                     if self.verbose:
                         print(response.status_code, response.reason)
                     data = response.text
