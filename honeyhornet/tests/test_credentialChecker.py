@@ -29,7 +29,7 @@ class TestCredentialChecker(TestCase):
     def test_check_ssh(self):
         credentials = [('devtestuser', 'TestPassword123')]
         cs = corescanner.HoneyHornet()
-        host = cs.create_new_vulnerable_host(['127.0.0.1'], [['22', {'port': '22', 'state': 'open'}]])
+        host = cs.create_new_vulnerable_host(['127.0.0.1', {'scan': {'127.0.0.1': {'tcp': {'9191': {'state': 'open'}}}}}], [22])
         cc = credentialchecker.CredentialChecker()
         result = cc.check_ssh(cs.vulnerable_hosts[0], credentials)
         self.assertTrue(result, msg="Integration test failed.")
