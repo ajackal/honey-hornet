@@ -1,0 +1,38 @@
+# Configuration file for Honey Hornet.
+
+# Defines the type of scan to run.
+# Uncomment one option only.
+scanType:
+  #- 1  # Port Scan
+  - 2  # Check Credentials
+
+resultsFormat:
+  - csv
+  - json
+
+# Uncomment to do banner grabs on HTTP ports.
+bannerGrab: False
+
+# Ports to scan on each target.
+ports:
+  - 21
+  - 22
+  - 23
+  - 9191
+
+# Users to test when running in Check Credentials mode.
+# need to implement a way to do a blank username and/or password
+users:
+  - devtestuser
+
+# Passwords to test when running in Check Credentials mode.
+passwords:
+  - TestPassword123
+
+# Path to list of targets for scanning.
+targets:
+  # Something about the path doesn't work with NMAP:
+  # - ~/path/to/target_list.txt
+  # As long as the file is in the same folder, works fine.
+  - test/test_local_target_list.txt
+  # - targets.txt
