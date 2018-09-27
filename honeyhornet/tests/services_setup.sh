@@ -7,7 +7,7 @@ if [ $(id -u) -eq 0 ]; then
     service vsftpd restart
     service ssh restart
     service xinetd restart
-    python3 honeyhornet/tests/test_http_server.py
+    python3 honeyhornet/tests/test_http_server.py &
 else
     echo "Not running as root!"
 fi
