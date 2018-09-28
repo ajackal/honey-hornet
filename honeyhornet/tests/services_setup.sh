@@ -9,6 +9,7 @@ if [ $(id -u) -eq 0 ]; then
     service xinetd restart
     python3 honeyhornet/tests/test_http_server.py &
     service --status-all
+    netstat -pant
 else
     echo "Not running as root!"
 fi
