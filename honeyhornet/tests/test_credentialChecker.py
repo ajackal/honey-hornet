@@ -32,7 +32,8 @@ class TestCredentialChecker(TestCase):
         host = cs.create_new_vulnerable_host(['127.0.0.1', {'scan': {'127.0.0.1': {'tcp': {'9191': {'state': 'open'}}}}}], ['22'])
         cc = credentialchecker.CredentialChecker()
         result = cc.check_ssh(cs.vulnerable_hosts[0], credentials)
-        self.assertTrue(result, msg="Integration test failed.")
+        self.assertIs(cs.vulnerable_hosts[0].credentials[0], credentials)
+        # self.assertTrue(result, msg="Integration test failed.")
     #     self.fail()
 
     # def test_banner_grab(self):
@@ -47,5 +48,6 @@ class TestCredentialChecker(TestCase):
         host = cs.create_new_vulnerable_host(['127.0.0.1', {'scan': {'127.0.0.1': {'tcp': {'9191': {'state': 'open'}}}}}], ['9191'])
         cc = credentialchecker.CredentialChecker()
         result = cc.http_post_xml(cs.vulnerable_hosts[0], credentials)
-        self.assertTrue(result, msg="Integration test failed.")
+        self.assertIs(cs.vulnerable_hosts[0].credentials[0], credentials)
+        # self.assertTrue(result, msg="Integration test failed.")
     #     self.fail()
