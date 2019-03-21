@@ -2,14 +2,16 @@ import argparse
 import logging
 import os
 import sys
+from datetime import datetime, date
 import nmap
 import yaml
 import json
-from datetime import datetime, date
 from termcolor import colored
-from honeyhornet import credentialchecker
+# from honeyhornet import credentialchecker
+import credentialchecker
 # from viewchecker import ViewChecker
-from honeyhornet import logger
+# from honeyhornet import logger
+import logger
 
 
 class HoneyHornet(logger.HoneyHornetLogger):
@@ -181,8 +183,11 @@ class HoneyHornet(logger.HoneyHornetLogger):
             new_host = VulnerableHost(host[0])  # creates new object
             self.vulnerable_hosts.append(new_host)
             for port in ports:
-                port_state = host[1]['scan'][host[0]]['tcp'][str(port)]['state']  # defines port state variable
-                if port_state == 'open':  # checks to see if status is open
+                try:
+                    port_state = host[1]['scan'][host[0]]['tcp'][port]['state']  # defines port state variable
+                except Exception:
+                    continue
+                if 'open' in port_state:  # checks to see if status is open
                     new_host.add_vulnerable_port(port)
                     self.log_open_port(host[0], port, port_state)
         except Exception:
@@ -222,7 +227,7 @@ class HoneyHornet(logger.HoneyHornetLogger):
                     ports = host[1]['scan'][host[0]]['tcp'].keys()  # retrieves tcp port results from scan
                     for port in ports:
                         port_state = host[1]['scan'][host[0]]['tcp'][port]['state']  # defines port state variable
-                        if port_state == 'open':
+                        if 'open' in port_state:
                             self.create_new_vulnerable_host(host, ports)
                             break
                 except KeyError:

@@ -37,4 +37,5 @@ passwords:
 # Path to list of targets for scanning.
 targets:
 # Must be in the same folder as main program.
-  - targets.txt
+  # - targets.txt
+  - 201903_ncats.txt
