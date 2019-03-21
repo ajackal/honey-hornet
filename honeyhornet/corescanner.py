@@ -185,7 +185,7 @@ class HoneyHornet(logger.HoneyHornetLogger):
             for port in ports:
                 try:
                     port_state = host[1]['scan'][host[0]]['tcp'][port]['state']  # defines port state variable
-                except Exception:
+                except KeyError:
                     continue
                 if 'open' in port_state:  # checks to see if status is open
                     new_host.add_vulnerable_port(port)
