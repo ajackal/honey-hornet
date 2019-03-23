@@ -1,6 +1,6 @@
 import os
 import argparse
-from honeyhornet import logger
+import honeyhornet.logger
 from threading import BoundedSemaphore
 import logging
 from datetime import date, datetime
