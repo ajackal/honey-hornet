@@ -26,10 +26,12 @@ class TestCredentialChecker(TestCase):
     def test_check_ssh(self):
         credentials = [('devtestuser', 'TestPassword123')]
         cs = honeyhornet.corescanner.HoneyHornet()
+        test_result_credentials = {'user': 'devtestuser', 'password': 'TestPassword123'}
         host = cs.create_new_vulnerable_host(['127.0.0.1', {'scan': {'127.0.0.1': {'tcp': {'9191': {'state': 'open'}}}}}], ['22'])
         cc = honeyhornet.credentialchecker.CredentialChecker()
         result = cc.check_ssh(cs.vulnerable_hosts[0], credentials)
-        self.assertIs(cs.vulnerable_hosts[0].credentials[0], credentials)
+        self.assertIn(cs.vulnerable_hosts[0].credentials[0]['user'], credentials[0])
+        self.assertIn(cs.vulnerable_hosts[0].credentials[0]['password'], credentials[0])
         # self.assertTrue(result, msg="Integration test failed.")
     #     self.fail()
 

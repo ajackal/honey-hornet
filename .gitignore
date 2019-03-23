@@ -13,3 +13,4 @@ configs/camera_viewer.yml
 configs/config2.yml
 logs/*.txt
 targets/*.txt
+dist/honeyhornet-1.1-py3.5.egg
