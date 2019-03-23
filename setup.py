@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='honeyhornet',
-    version='1.1',
+    version='1.2',
     packages=['honeyhornet'],
     url='https://github.com/ajackal/honey-hornet.git',
     license='GNU General Public License v3.0',
