@@ -1,10 +1,10 @@
 from unittest import TestCase
-from honeyhornet import logger
+import honeyhornet.logger
 
 
 class TestHoneyHornetLogger(TestCase):
     def test_write_log_file(self):
-        test_log_file = logger.HoneyHornetLogger()
+        test_log_file = honeyhornet.logger.HoneyHornetLogger()
         event = "A test event."
         wrong_event = "Something different so it fails."
         test_log_file.write_log_file(test_log_file.log_name, event)

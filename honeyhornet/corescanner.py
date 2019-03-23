@@ -7,12 +7,12 @@ import yaml
 import json
 from datetime import datetime, date
 from termcolor import colored
-from honeyhornet import credentialchecker
+import honeyhornet.credentialchecker
 # from viewchecker import ViewChecker
-from honeyhornet import logger
+import honeyhornet.logger
 
 
-class HoneyHornet(logger.HoneyHornetLogger):
+class HoneyHornet(honeyhornet.logger.HoneyHornetLogger):
     """Uses NMAP to scan the targets and ports listed in the configuration file.
 
     Inherits HoneyHornetLogger for all the logging functionality.
@@ -30,7 +30,7 @@ class HoneyHornet(logger.HoneyHornetLogger):
     vulnerable_hosts = []
 
     def __init__(self):
-        logger.HoneyHornetLogger.__init__(self)
+        honeyhornet.logger.HoneyHornetLogger.__init__(self)
         self.live_hosts = []
         self.time_stamp = str(date.today())
         self.verbose = False
@@ -361,7 +361,7 @@ def main():
         elif scan_type == '2':
             print("[*] Running in credential check mode...")
             # Instantiates Credential Checker & loads the HoneyHornet config.
-            cc = credentialchecker.CredentialChecker(config=hh.config)
+            cc = honeyhornet.credentialchecker.CredentialChecker(config=hh.config)
             # Enables banner grabbing if True in config.
             if banner is True:
                 cc.banner = banner

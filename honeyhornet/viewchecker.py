@@ -6,9 +6,10 @@ import threading
 import logging
 from datetime import date, datetime
 from termcolor import colored
-import httplib
+import http.client
 import re
 import time
+
 
 class ViewChecker(HoneyHornetLogger):
     def __init__(self, config=None):
@@ -26,7 +27,8 @@ class ViewChecker(HoneyHornetLogger):
                             level=logging.DEBUG)
 
     def determine_camera_model(self, vulnerable_host, https=False, retry=False):
-        """ simple banner grab with HTTPLIB """
+        """ simple banner grab with http.client """
+        ports = []
         self.CONNECTION_LOCK.acquire()
         service = "DETERMINE-CAMERA-MODEL"
         if retry is False:
@@ -39,26 +41,26 @@ class ViewChecker(HoneyHornetLogger):
         elif retry is True:
             host = vulnerable_host
         if self.verbose:
-            print "[*] Checking camera make & model of {0}".format(host)
+            print("[*] Checking camera make & model of {0}".format(host))
         logging.info('{0} set for {1} service'.format(host, service))
         try:
             for port in ports_to_check:
                 if https is True:
-                    conn = httplib.HTTPSConnection(host, port)
+                    conn = http.client.HTTPSConnection(host, port)
                 else:
-                    conn = httplib.HTTPConnection(host, port)
+                    conn = http.client.HTTPConnection(host, port)
                 conn.request("GET", "/")
                 http_r1 = conn.getresponse()
                 camera_check = http_r1.read(1024)
                 headers = http_r1.getheaders()
                 if self.verbose:
-                    print http_r1.status, http_r1.reason
-                print http_r1.status, http_r1.reason
+                    print(http_r1.status, http_r1.reason)
+                print(http_r1.status, http_r1.reason)
                 results = re.findall(r"<title>(?P<camera_title>.*)</title>", str(camera_check))
                 if results:
-                    print results
+                    print(results)
                 else:
-                    print "No match for <Title> tag found."
+                    print("No match for <Title> tag found.")
                 # puts banner into the class instance of the host
                 # vulnerable_host.put_banner(port, banner_txt, http_r1.status, http_r1.reason, headers)
                 # banner_grab_filename = str(date.today()) + "_banner_grabs.log"
@@ -67,7 +69,7 @@ class ViewChecker(HoneyHornetLogger):
                 #     banner_to_log = "host={0}, http_port={1},\nheaders={2},\nbanner={3}\n".format(host, port,
                 #                                                                                   headers, banner_txt)
                 #     banner_log.write(banner_to_log)
-        except httplib.HTTPException:
+        except http.client.HTTPException:
             try:
                 self.determine_camera_model(host, https=True, retry=True)
             except Exception as error:
@@ -89,11 +91,11 @@ class ViewChecker(HoneyHornetLogger):
         logging.info("Building threads.")
         logging.info("Verbosity set to {0}".format(self.verbose))
         threads = []
-        print "[*] Testing vulnerable host ip addresses..."
+        print("[*] Testing vulnerable host ip addresses...")
         try:
             for vulnerable_host in hosts_to_check:
                 if self.verbose:
-                    print '[*] checking >> {0}'.format(vulnerable_host.ip)
+                    print('[*] checking >> {0}'.format(vulnerable_host.ip))
                 if set(vulnerable_host.ports):
                     t0 = threading.Thread(target=self.determine_camera_model, args=(vulnerable_host, ))
                     threads.append(t0)

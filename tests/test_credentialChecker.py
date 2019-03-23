@@ -1,14 +1,11 @@
 from unittest import TestCase
-from honeyhornet import corescanner
-from honeyhornet import credentialchecker
-import os
-from honeyhornet.tests import test_http_server
-import threading
+import honeyhornet.corescanner
+import honeyhornet.credentialchecker
 
 
 class TestCredentialChecker(TestCase):
     def test_build_credentials(self):
-        cc = credentialchecker.CredentialChecker()
+        cc = honeyhornet.credentialchecker.CredentialChecker()
         cc.config = {'users': ['fry', 'leela', 'nibbler'], 'passwords': ['12345', 'password', 'planetExpress']}
         actual = cc.build_credentials()
         expected = [('fry', '12345'), ('fry', 'password'), ('fry', 'planetExpress'),
@@ -28,9 +25,9 @@ class TestCredentialChecker(TestCase):
 
     def test_check_ssh(self):
         credentials = [('devtestuser', 'TestPassword123')]
-        cs = corescanner.HoneyHornet()
+        cs = honeyhornet.corescanner.HoneyHornet()
         host = cs.create_new_vulnerable_host(['127.0.0.1', {'scan': {'127.0.0.1': {'tcp': {'9191': {'state': 'open'}}}}}], ['22'])
-        cc = credentialchecker.CredentialChecker()
+        cc = honeyhornet.credentialchecker.CredentialChecker()
         result = cc.check_ssh(cs.vulnerable_hosts[0], credentials)
         self.assertIs(cs.vulnerable_hosts[0].credentials[0], credentials)
         # self.assertTrue(result, msg="Integration test failed.")
@@ -44,9 +41,9 @@ class TestCredentialChecker(TestCase):
         # http_server_threat.start()
         # os.system("/usr/bin/python3 /home/bob/PycharmProjects/honey-hornet/honeyhornet/tests/test_http_server.py")
         credentials = [('devtestuser', 'TestPassword123')]
-        cs = corescanner.HoneyHornet()
+        cs = honeyhornet.corescanner.HoneyHornet()
         host = cs.create_new_vulnerable_host(['127.0.0.1', {'scan': {'127.0.0.1': {'tcp': {'9191': {'state': 'open'}}}}}], ['9191'])
-        cc = credentialchecker.CredentialChecker()
+        cc = honeyhornet.credentialchecker.CredentialChecker()
         result = cc.http_post_xml(cs.vulnerable_hosts[0], credentials)
         self.assertIs(cs.vulnerable_hosts[0].credentials[0], credentials)
         # self.assertTrue(result, msg="Integration test failed.")
