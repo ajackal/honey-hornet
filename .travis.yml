@@ -8,5 +8,6 @@ before_install:
   - sudo tests/services_setup.sh
 install:
   - pip install -r requirements.txt
+  - pip install -e .
 script:
-- pytest
+- python -m pytest -v
